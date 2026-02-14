@@ -1,0 +1,521 @@
+.wrapper {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 16px;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 24px;
+  margin: 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.accountInfo {
+  color: #333;
+}
+
+.tabs {
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid #e6e6e6;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #555;
+}
+
+.tabActive {
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #0b5cff;
+  border-bottom: 2px solid #0b5cff;
+}
+
+.content {
+  padding: 8px 0 40px 0;
+}
+
+.card {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.editBtn {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  background: #111;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.cardTitle {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+}
+
+.profileRow {
+  display: flex;
+  gap: 28px;
+}
+
+.avatarCol {
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.avatar {
+  height: 88px;
+  width: 88px;
+  border-radius: 50%;
+  background: #e9f0ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: #0b5cff;
+}
+
+.avatarImage {
+  height: 88px;
+  width: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #f0f0f0;
+}
+
+.uploadBtn {
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.detailsCol {
+  flex: 1;
+}
+
+.field {
+  margin-bottom: 14px;
+  color: #222;
+}
+
+.field strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 700px) {
+  .profileRow { flex-direction: column; }
+  .avatarCol { width: 100%; align-items: center; }
+  .detailsCol { width: 100%; }
+}
+
+.filterBar {
+  display: flex;
+  gap: 12px;
+  background: #fff;
+  padding: 18px;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.select, .input {
+  padding: 12px 14px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  background: white;
+}
+
+.select { min-width: 180px; }
+.input { flex: 1; }
+.searchBtn {
+  background: #111;
+  color: #fff;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 18px;
+}
+
+.workerCard {
+  background: #fff;
+
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1 solid gainsboro;
+}
+
+.cardHeader { display:flex; gap:12px; align-items:center; }
+.cardAvatar { height:56px; width:56px; border-radius:28px; background:#eaf1ff; display:flex; align-items:center; justify-content:center; color:#0b5cff; font-weight:600; }
+.cardAvatarImage { height:56px; width:56px; border-radius:28px; object-fit:cover; border:2px solid #f0f0f0; }
+.cardName { font-weight:600 }
+.cardLocation { font-size:13px; color:#666 }
+.stars { margin-left:auto; color:#f3b000 }
+.cardBio { color:#333; min-height:40px }
+.skillList { display:flex; gap:8px; flex-wrap:wrap }
+.skill { background:#eef5ff; padding:6px 10px; border-radius:16px; color:#0b5cff; font-size:13px }
+.cardActions { display:flex; gap:8px }
+.viewBtn { background:#fff; border:1px solid #e6e6e6; padding:8px 12px; border-radius:8px; cursor:pointer }
+.contactBtn { background:#111; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .grid { grid-template-columns: 1fr; }
+  .filterBar { flex-direction: column; align-items: stretch }
+}
+/* Requests List */
+.requestsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.requestCard {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border: 1px solid #e6e6e6;
+}
+
+.requestHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.requestStatus {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.badgePending {
+  background: #fff3cd;
+  color: #856404;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.requestDate {
+  font-size: 12px;
+  color: #999;
+}
+
+.requestBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.requestDescription {
+  color: #333;
+  line-height: 1.5;
+  margin: 0;
+  word-break: break-word;
+}
+
+.requestActions {
+  display: flex;
+  gap: 10px;
+}
+
+.editRequestBtn, .deleteRequestBtn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.editRequestBtn {
+  background: #0b5cff;
+  color: white;
+}
+
+.editRequestBtn:hover {
+  background: #0a48cc;
+}
+
+.deleteRequestBtn {
+  background: #ff4757;
+  color: white;
+}
+
+.deleteRequestBtn:hover {
+  background: #ff3838;
+}
+
+.editRequestForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.editTextarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.editTextarea:focus {
+  outline: none;
+  border-color: #0b5cff;
+  box-shadow: 0 0 0 3px rgba(11, 92, 255, 0.1);
+}
+
+.editActions {
+  display: flex;
+  gap: 10px;
+}
+
+.saveBtnSmall, .cancelBtnSmall {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.saveBtnSmall {
+  background: #28a745;
+  color: white;
+}
+
+.saveBtnSmall:hover {
+  background: #218838;
+}
+
+.cancelBtnSmall {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.cancelBtnSmall:hover {
+  background: #e0e0e0;
+}
+
+/* Worker Request Actions */
+.workerRequestActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.applyBtn, .messageBtn, .deleteWorkerBtn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.applyBtn {
+  background: #28a745;
+  color: white;
+}
+
+.applyBtn:hover {
+  background: #218838;
+}
+
+.messageBtn {
+  background: #17a2b8;
+  color: white;
+}
+
+.messageBtn:hover {
+  background: #138496;
+}
+
+.deleteWorkerBtn {
+  background: #ff4757;
+  color: white;
+}
+
+.deleteWorkerBtn:hover {
+  background: #ff3838;
+}
+
+.badgeAccepted {
+  background: #d4edda;
+  color: #155724;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.customerInfo {
+  color: #666;
+  font-size: 13px;
+}
+
+/* Message Modal */
+.messageOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.messageModal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 500px;
+}
+
+.messageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.messageHeader h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.messageClose {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.messageClose:hover {
+  color: #333;
+}
+
+.messageContent {
+  padding: 20px;
+}
+
+.messageTextarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.messageTextarea:focus {
+  outline: none;
+  border-color: #0b5cff;
+  box-shadow: 0 0 0 3px rgba(11, 92, 255, 0.1);
+}
+
+.messageActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 20px;
+  border-top: 1px solid #e6e6e6;
+}
+
+.messageCancelBtn, .messageSendBtn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.messageCancelBtn {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.messageCancelBtn:hover {
+  background: #e0e0e0;
+}
+
+.messageSendBtn {
+  background: #0b5cff;
+  color: white;
+}
+
+.messageSendBtn:hover {
+  background: #0a48cc;
+}

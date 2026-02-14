@@ -1,0 +1,275 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #e6e6e6;
+  position: sticky;
+  top: 0;
+  background: white;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeBtn:hover {
+  color: #333;
+}
+
+.content {
+  padding: 24px;
+}
+
+/* Profile Section */
+.profileSection {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.photoArea {
+  flex-shrink: 0;
+}
+
+.profilePhoto {
+  width: 140px;
+  height: 140px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 3px solid #f0f0f0;
+}
+
+.photoPlaceholder {
+  width: 140px;
+  height: 140px;
+  border-radius: 12px;
+  background: #e9f0ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  color: #0b5cff;
+  font-weight: 600;
+  border: 3px solid #f0f0f0;
+}
+
+.basicInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.basicInfo h3 {
+  margin: 0 0 12px 0;
+  font-size: 24px;
+  color: #111;
+}
+
+.location {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #666;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stars {
+  color: #f3b000;
+  font-size: 16px;
+}
+
+.ratingText {
+  color: #999;
+  font-size: 14px;
+}
+
+/* Detail Sections */
+.detailSection {
+  margin-bottom: 24px;
+}
+
+.detailGroup {
+  margin-bottom: 20px;
+}
+
+.detailGroup h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #666;
+  letter-spacing: 0.5px;
+}
+
+.detailGroup p {
+  margin: 0;
+  color: #333;
+  line-height: 1.5;
+}
+
+.skillsList {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.skillTag {
+  display: inline-block;
+  background: #eef5ff;
+  color: #0b5cff;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.notSpecified {
+  color: #999;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Work Images Gallery */
+.workImagesGallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.galleryImage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f0f0f0;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.galleryImage:hover {
+  transform: scale(1.02);
+}
+
+.galleryImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 24px;
+  border-top: 1px solid #e6e6e6;
+  margin-top: 32px;
+}
+
+.cancelBtn,
+.sendBtn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.cancelBtn {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.cancelBtn:hover {
+  background: #e0e0e0;
+}
+
+.sendBtn {
+  background: #0b5cff;
+  color: white;
+}
+
+.sendBtn:hover {
+  background: #0a48cc;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .modal {
+    max-width: 100%;
+    max-height: 100vh;
+  }
+
+  .overlay {
+    padding: 16px;
+  }
+
+  .profileSection {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .basicInfo {
+    align-items: center;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancelBtn,
+  .sendBtn {
+    width: 100%;
+  }
+}
