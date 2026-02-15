@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import styles from "./Notifications.module.css";
 
 interface CurrentUser {
@@ -40,7 +40,6 @@ function getThreadKey(message: Message, currentUserId: string) {
 
 export default function Notifications({ user }: NotificationsProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [threads, setThreads] = useState<Thread[]>([]);
   const [selectedThreadKey, setSelectedThreadKey] = useState<string>("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -48,28 +47,25 @@ export default function Notifications({ user }: NotificationsProps) {
   const [sending, setSending] = useState(false);
   const [usersMap, setUsersMap] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
-  }, [user.id]);
-
-  const fetchMessages = async () => {
+  const loadUsers = useCallback(async () => {
     try {
-      const [messagesRes, usersRes] = await Promise.all([
-        fetch("/api/messages"),
-        fetch("/api/users"),
-      ]);
-      let nameMap: Record<string, string> = {};
+      const usersRes = await fetch("/api/users");
+      if (!usersRes.ok) return;
+      const usersData = await usersRes.json();
+      const users = Array.isArray(usersData) ? usersData : usersData.users || [];
+      const nameMap: Record<string, string> = {};
+      users.forEach((u: any) => {
+        nameMap[u.id] = u.fullName || u.email || "User";
+      });
+      setUsersMap(nameMap);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    }
+  }, []);
 
-      if (usersRes.ok) {
-        const usersData = await usersRes.json();
-        const users = Array.isArray(usersData) ? usersData : usersData.users || [];
-        users.forEach((u: any) => {
-          nameMap[u.id] = u.fullName || u.email || "User";
-        });
-        setUsersMap(nameMap);
-      }
+  const fetchMessages = useCallback(async () => {
+    try {
+      const messagesRes = await fetch("/api/messages");
 
       if (messagesRes.ok) {
         const data = (await messagesRes.json()) as Message[];
@@ -81,46 +77,67 @@ export default function Notifications({ user }: NotificationsProps) {
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
         setMessages(myMessages);
-
-        const threadMap = new Map<string, Thread>();
-        myMessages.forEach((msg) => {
-          const key = getThreadKey(msg, user.id);
-          const otherUserId =
-            msg.senderId === user.id ? msg.recipientId : msg.senderId;
-          const otherName =
-            nameMap[otherUserId] || usersMap[otherUserId] || msg.senderName || `User ${otherUserId}`;
-          const existing = threadMap.get(key);
-          if (
-            !existing ||
-            new Date(msg.createdAt).getTime() >
-              new Date(existing.lastMessage.createdAt).getTime()
-          ) {
-            threadMap.set(key, {
-              key,
-              requestId: msg.requestId,
-              otherUserId,
-              otherName,
-              lastMessage: msg,
-            });
-          }
-        });
-
-        const sortedThreads = [...threadMap.values()].sort(
-          (a, b) =>
-            new Date(b.lastMessage.createdAt).getTime() -
-            new Date(a.lastMessage.createdAt).getTime()
-        );
-        setThreads(sortedThreads);
-        if (!selectedThreadKey && sortedThreads.length > 0) {
-          setSelectedThreadKey(sortedThreads[0].key);
-        }
       }
     } catch (error) {
       console.error("Failed to fetch messages:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.id]);
+
+  useEffect(() => {
+    setLoading(true);
+    loadUsers();
+    fetchMessages();
+  }, [fetchMessages, loadUsers, user.id]);
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    const interval = setInterval(fetchMessages, 8000);
+    return () => clearInterval(interval);
+  }, [fetchMessages, showDropdown]);
+
+  const threads = useMemo(() => {
+    const threadMap = new Map<string, Thread>();
+    messages.forEach((msg) => {
+      const key = getThreadKey(msg, user.id);
+      const otherUserId =
+        msg.senderId === user.id ? msg.recipientId : msg.senderId;
+      const otherName =
+        usersMap[otherUserId] || msg.senderName || `User ${otherUserId}`;
+      const existing = threadMap.get(key);
+      if (
+        !existing ||
+        new Date(msg.createdAt).getTime() >
+          new Date(existing.lastMessage.createdAt).getTime()
+      ) {
+        threadMap.set(key, {
+          key,
+          requestId: msg.requestId,
+          otherUserId,
+          otherName,
+          lastMessage: msg,
+        });
+      }
+    });
+
+    return [...threadMap.values()].sort(
+      (a, b) =>
+        new Date(b.lastMessage.createdAt).getTime() -
+        new Date(a.lastMessage.createdAt).getTime()
+    );
+  }, [messages, user.id, usersMap]);
+
+  useEffect(() => {
+    if (threads.length === 0) {
+      if (selectedThreadKey) setSelectedThreadKey("");
+      return;
+    }
+    const exists = threads.some((t) => t.key === selectedThreadKey);
+    if (!exists) {
+      setSelectedThreadKey(threads[0].key);
+    }
+  }, [selectedThreadKey, threads]);
 
   const activeThread = threads.find((thread) => thread.key === selectedThreadKey);
   const activeMessages = activeThread

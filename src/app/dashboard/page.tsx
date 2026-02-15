@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./dashboard.module.css";
 import ProfileEditModal from "@/components/ProfileEditModal/ProfileEditModal";
@@ -25,8 +25,42 @@ export default function DashboardPage() {
   const [editingDescription, setEditingDescription] = useState<string>("");
   const [workerRequests, setWorkerRequests] = useState<any[]>([]);
   const [showMessageModal, setShowMessageModal] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
+  const [activeChatRequestId, setActiveChatRequestId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState<string>("");
+
+  const loadWorkers = useCallback(async () => {
+    try {
+      const response = await fetch("/api/users");
+      const data = await response.json();
+      const list = Array.isArray(data) ? data : data.users || [];
+      setWorkers(list.filter((x: any) => x.role === "worker"));
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const fetchCustomerRequests = useCallback(async (customerId: string) => {
+    try {
+      const response = await fetch("/api/requests");
+      const allRequests = await response.json();
+      const myRequests = allRequests.filter((req: any) => req.customerId === customerId);
+      setCustomerRequests(myRequests);
+    } catch (err) {
+      console.error("Error fetching requests:", err);
+    }
+  }, []);
+
+  const fetchWorkerRequests = useCallback(async (workerId: string) => {
+    try {
+      const response = await fetch("/api/requests");
+      const allRequests = await response.json();
+      const received = allRequests.filter((req: any) => req.workerId === workerId);
+      setWorkerRequests(received);
+    } catch (err) {
+      console.error("Error fetching worker requests:", err);
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -41,14 +75,7 @@ export default function DashboardPage() {
       // Set default tab based on user role
       if (u.role === "customer") {
         setActiveTab("browse");
-        // Fetch workers
-        fetch("/api/users")
-          .then((r) => r.json())
-          .then((data) => {
-            const list = Array.isArray(data) ? data : data.users || [];
-            setWorkers(list.filter((x: any) => x.role === "worker"));
-          })
-          .catch((err) => console.error(err));
+        loadWorkers();
         // Fetch customer's requests
         fetchCustomerRequests(u.id);
       } else {
@@ -59,29 +86,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error(error);
     }
-  }, [router]);
-
-  const fetchCustomerRequests = async (customerId: string) => {
-    try {
-      const response = await fetch("/api/requests");
-      const allRequests = await response.json();
-      const myRequests = allRequests.filter((req: any) => req.customerId === customerId);
-      setCustomerRequests(myRequests);
-    } catch (err) {
-      console.error("Error fetching requests:", err);
-    }
-  };
-
-  const fetchWorkerRequests = async (workerId: string) => {
-    try {
-      const response = await fetch("/api/requests");
-      const allRequests = await response.json();
-      const received = allRequests.filter((req: any) => req.workerId === workerId);
-      setWorkerRequests(received);
-    } catch (err) {
-      console.error("Error fetching worker requests:", err);
-    }
-  };
+  }, [fetchCustomerRequests, fetchWorkerRequests, loadWorkers, router]);
 
   const handleSaveProfile = async (profileData: any) => {
     try {
@@ -114,13 +119,7 @@ export default function DashboardPage() {
       
       // Refresh workers list if customer
       if (user.role === "customer") {
-        fetch("/api/users")
-          .then((r) => r.json())
-          .then((data) => {
-            const list = Array.isArray(data) ? data : data.users || [];
-            setWorkers(list.filter((x: any) => x.role === "worker"));
-          })
-          .catch((err) => console.error(err));
+        loadWorkers();
       }
       
       console.log("Profile saved successfully!");
@@ -292,13 +291,31 @@ export default function DashboardPage() {
     fetch(`/api/users/${customerId}`)
       .then((r) => r.json())
       .then((customer) => {
-        setSelectedCustomer(customer);
+        setSelectedChatUser(customer);
+        setActiveChatRequestId(request.id);
         setShowMessageModal(true);
       })
       .catch((err) => console.error(err));
   };
 
-  const handleSendMessage = async (requestId: string) => {
+  const handleOpenChatFromProfile = (worker: any) => {
+    const existingRequest = customerRequests.find((req: any) => req.workerId === worker.id);
+    if (!existingRequest) {
+      alert("Send a request to this worker first, then you can chat.");
+      return;
+    }
+    setSelectedChatUser(worker);
+    setActiveChatRequestId(existingRequest.id);
+    setShowWorkerProfile(false);
+    setShowMessageModal(true);
+  };
+
+  const handleSendMessage = async () => {
+    if (!activeChatRequestId || !selectedChatUser) {
+      alert("Chat context is missing");
+      return;
+    }
+
     if (!messageText.trim()) {
       alert("Please enter a message");
       return;
@@ -311,11 +328,11 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          requestId,
+          requestId: activeChatRequestId,
           senderId: user.id,
           senderName: user.fullName,
-          senderRole: "worker",
-          recipientId: selectedCustomer.id,
+          senderRole: user.role || "user",
+          recipientId: selectedChatUser.id,
           message: messageText,
         }),
       });
@@ -328,6 +345,7 @@ export default function DashboardPage() {
 
       setMessageText("");
       setShowMessageModal(false);
+      setActiveChatRequestId(null);
       alert("Message sent successfully!");
     } catch (error: any) {
       console.error("Error sending message:", error);
@@ -335,6 +353,35 @@ export default function DashboardPage() {
     }
   };
 
+  const normalizedLocationFilter = locationFilter.toLowerCase();
+  const normalizedSkillQuery = skillQuery.toLowerCase();
+  const normalizedCategory = category.toLowerCase();
+  const filteredWorkers = useMemo(() => {
+    return workers.filter((w) => {
+      if (
+        normalizedLocationFilter &&
+        !(w.profile?.location || w.phone || "")
+          .toLowerCase()
+          .includes(normalizedLocationFilter)
+      ) {
+        return false;
+      }
+      const skills = (w.profile?.skills || "").toString().toLowerCase();
+      if (normalizedSkillQuery && !skills.includes(normalizedSkillQuery)) {
+        return false;
+      }
+      if (category !== "All Categories" && !skills.includes(normalizedCategory)) {
+        return false;
+      }
+      return true;
+    });
+  }, [
+    workers,
+    normalizedLocationFilter,
+    normalizedSkillQuery,
+    normalizedCategory,
+    category,
+  ]);
   if (!user) return <p style={{ padding: 24 }}>Loading...</p>;
 
   const profile = user.profile || {};
@@ -455,20 +502,7 @@ export default function DashboardPage() {
           </div>
 
           <div className={styles.grid}>
-            {workers
-              .filter((w) => {
-                if (locationFilter && !(w.profile?.location || w.phone || "").toLowerCase().includes(locationFilter.toLowerCase())) return false;
-                if (skillQuery) {
-                  const skills = (w.profile?.skills || "").toString().toLowerCase();
-                  if (!skills.includes(skillQuery.toLowerCase())) return false;
-                }
-                if (category !== "All Categories") {
-                  const skills = (w.profile?.skills || "").toString().toLowerCase();
-                  if (!skills.includes(category.toLowerCase())) return false;
-                }
-                return true;
-              })
-              .map((w) => (
+            {filteredWorkers.map((w) => (
                 <div key={w.id} className={styles.workerCard}>
                   <div className={styles.cardHeader}>
                     {w.profile?.profilePicture ? (
@@ -499,7 +533,7 @@ export default function DashboardPage() {
                     }}>Send Request</button>
                   </div>
                 </div>
-              ))}
+            ))}
           </div>
         </section>
       )}
@@ -609,6 +643,7 @@ export default function DashboardPage() {
             setShowWorkerProfile(false);
             setSelectedWorker(null);
           }} 
+          onChat={() => handleOpenChatFromProfile(selectedWorker)}
           onSendRequest={() => {
             setShowWorkerProfile(false);
             setShowSendRequest(true);
@@ -627,11 +662,11 @@ export default function DashboardPage() {
         />
       )}
 
-      {showMessageModal && selectedCustomer && (
+      {showMessageModal && selectedChatUser && (
         <div className={styles.messageOverlay} onClick={() => setShowMessageModal(false)}>
           <div className={styles.messageModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.messageHeader}>
-              <h3>Message to {selectedCustomer.fullName}</h3>
+              <h3>Message to {selectedChatUser.fullName}</h3>
               <button className={styles.messageClose} onClick={() => setShowMessageModal(false)}>✕</button>
             </div>
             <div className={styles.messageContent}>
@@ -652,13 +687,7 @@ export default function DashboardPage() {
               </button>
               <button
                 className={styles.messageSendBtn}
-                onClick={() => {
-                  // Find the request ID from selected context
-                  const request = workerRequests.find((r: any) => r.customerId === selectedCustomer.id);
-                  if (request) {
-                    handleSendMessage(request.id);
-                  }
-                }}
+                onClick={handleSendMessage}
               >
                 Send Message
               </button>

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUser } from "@/lib/users";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,14 +44,21 @@ export async function POST(request: NextRequest) {
 
     // Create user
     const user = await createUser(email, password, fullName, phone, role);
-
-    // Return user data (without password)
-    const { password: _, ...userWithoutPassword } = user;
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     return NextResponse.json(
       {
         message: "User created successfully",
-        user: userWithoutPassword,
+        user,
+        token,
       },
       { status: 201 }
     );

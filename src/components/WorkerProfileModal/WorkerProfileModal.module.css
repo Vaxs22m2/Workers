@@ -215,6 +215,7 @@
 }
 
 .cancelBtn,
+.chatBtn,
 .sendBtn {
   padding: 10px 20px;
   border-radius: 8px;
@@ -243,6 +244,15 @@
   background: #0a48cc;
 }
 
+.chatBtn {
+  background: #111;
+  color: #fff;
+}
+
+.chatBtn:hover {
+  background: #000;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .modal {
@@ -269,6 +279,7 @@
   }
 
   .cancelBtn,
+  .chatBtn,
   .sendBtn {
     width: 100%;
   }

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./login.module.css";
-import Header from "@/components/Header/Header";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,7 +27,12 @@ export default function LoginPage() {
           alert(data.error || "Failed to sign up");
           return;
         }
-        // after signup, continue to sign in
+        if (data?.token && data?.user) {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          router.push("/dashboard");
+          return;
+        }
       }
 
       const loginRes = await fetch("/api/auth/login", {
