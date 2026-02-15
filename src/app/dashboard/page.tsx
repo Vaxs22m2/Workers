@@ -2,10 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import styles from "./dashboard.module.css";
-import ProfileEditModal from "@/components/ProfileEditModal/ProfileEditModal";
-import WorkerProfileModal from "@/components/WorkerProfileModal/WorkerProfileModal";
-import SendRequestModal from "@/components/SendRequestModal/SendRequestModal";
+
+const ProfileEditModal = dynamic(
+  () => import("@/components/ProfileEditModal/ProfileEditModal"),
+  { ssr: false }
+);
+const WorkerProfileModal = dynamic(
+  () => import("@/components/WorkerProfileModal/WorkerProfileModal"),
+  { ssr: false }
+);
+const SendRequestModal = dynamic(
+  () => import("@/components/SendRequestModal/SendRequestModal"),
+  { ssr: false }
+);
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -106,8 +117,7 @@ export default function DashboardPage() {
       if (!user) {
         throw new Error("User not loaded");
       }
-      
-      console.log("Saving profile for user:", user.id);
+
       const response = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
         headers: {
@@ -116,9 +126,7 @@ export default function DashboardPage() {
         body: JSON.stringify(profileData),
       });
 
-      console.log("Response status:", response.status);
       const result = await response.json();
-      console.log("Response data:", result);
 
       if (!response.ok) {
         throw new Error(result.error || "Failed to update profile");
@@ -137,12 +145,8 @@ export default function DashboardPage() {
         return next;
       });
       
-      // Refresh workers list if customer
-      if (user.role === "customer") {
-        loadWorkers();
-      }
-      
-      console.log("Profile saved successfully!");
+      // Refresh workers in background only for customer accounts.
+      if (user.role === "customer") loadWorkers();
     } catch (error: any) {
       console.error("Save profile error:", error);
       throw new Error(error.message || "Failed to save profile");

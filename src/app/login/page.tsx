@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./login.module.css";
 
@@ -13,6 +13,17 @@ export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"customer" | "worker">("customer");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const token = localStorage.getItem("token");
+    if (storedUser && token) {
+      router.replace("/dashboard");
+      return;
+    }
+    setCheckingAuth(false);
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +73,15 @@ export default function LoginPage() {
 
   return (
     <main className={styles.container}>
+      {checkingAuth && (
+        <div className={styles.loadingBar}>
+          <div className={styles.loadingBarInner} />
+        </div>
+      )}
+      {checkingAuth ? (
+        <p>Checking session...</p>
+      ) : (
+      <>
       {isSubmitting && (
         <div className={styles.loadingBar}>
           <div className={styles.loadingBarInner} />
@@ -143,7 +163,8 @@ export default function LoginPage() {
           {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
         </button>
       </form>
-
+      </>
+      )}
     </main>
   );
 }

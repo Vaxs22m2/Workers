@@ -9,7 +9,6 @@ export async function GET(
 ) {
   try {
     const { id: userId } = params instanceof Promise ? await params : params;
-    console.log("Getting user:", userId);
     const user = getUserById(userId);
 
     if (!user) {
@@ -41,12 +40,7 @@ export async function PUT(
     const { id: userId } = params instanceof Promise ? await params : params;
     const body = await request.json();
 
-    console.log("Updating user:", userId);
-    console.log("Update data:", body);
-
     const updatedUser = await updateUserProfile(userId, body);
-
-    console.log("User updated successfully");
     return NextResponse.json(
       {
         message: "Profile updated successfully",
