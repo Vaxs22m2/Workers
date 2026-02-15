@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
 
     let users: any[] = await listUsers();
     if (role) {
-      users = users.filter((u: any) => u.role === role);
+      const wantedRole = role.toLowerCase().trim();
+      users = users.filter(
+        (u: any) => (u.role || "").toLowerCase().trim() === wantedRole
+      );
     }
 
     if (lite) {

@@ -39,12 +39,35 @@ export default function DashboardPage() {
   const loadWorkers = useCallback(async () => {
     setWorkersLoading(true);
     try {
-      const response = await fetch("/api/users?role=worker&lite=1", {
-        cache: "no-store",
-      });
-      const data = await response.json();
-      const list = Array.isArray(data) ? data : data.users || [];
-      setWorkers(list);
+      let lastError: unknown = null;
+      for (let i = 0; i < 2; i++) {
+        try {
+          const response = await fetch("/api/users?role=worker&lite=1", {
+            cache: "no-store",
+          });
+          if (!response.ok) {
+            throw new Error(`Failed to load workers: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const list = Array.isArray(data) ? data : data.users || [];
+          if (!Array.isArray(list)) {
+            throw new Error("Invalid workers payload");
+          }
+
+          setWorkers(list);
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err;
+          if (i === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+        }
+      }
+      if (lastError) {
+        throw lastError;
+      }
     } catch (err) {
       console.error(err);
     } finally {
