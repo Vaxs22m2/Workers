@@ -45,7 +45,6 @@ export default function DashboardPage() {
       const data = await response.json();
       const list = Array.isArray(data) ? data : data.users || [];
       setWorkers(list);
-      sessionStorage.setItem("workers_cache_v1", JSON.stringify(list));
     } catch (err) {
       console.error(err);
     } finally {
@@ -88,17 +87,6 @@ export default function DashboardPage() {
       // Set default tab based on user role
       if (u.role === "customer") {
         setActiveTab("browse");
-        const workersCache = sessionStorage.getItem("workers_cache_v1");
-        if (workersCache) {
-          try {
-            const parsed = JSON.parse(workersCache);
-            if (Array.isArray(parsed)) {
-              setWorkers(parsed);
-            }
-          } catch {
-            // ignore malformed cache
-          }
-        }
         loadWorkers();
         // Fetch customer's requests
         fetchCustomerRequests(u.id);
@@ -111,39 +99,6 @@ export default function DashboardPage() {
       console.error(error);
     }
   }, [fetchCustomerRequests, fetchWorkerRequests, loadWorkers, router]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const refresh = () => {
-      if (user.role === "customer") {
-        if (activeTab === "browse") loadWorkers();
-        if (activeTab === "myrequests") fetchCustomerRequests(user.id);
-      } else if (user.role === "worker" && activeTab === "requests") {
-        fetchWorkerRequests(user.id);
-      }
-    };
-
-    const interval = setInterval(refresh, 10000);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") refresh();
-    };
-
-    window.addEventListener("focus", refresh);
-    document.addEventListener("visibilitychange", onVisible);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", refresh);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [
-    activeTab,
-    fetchCustomerRequests,
-    fetchWorkerRequests,
-    loadWorkers,
-    user,
-  ]);
 
   const handleSaveProfile = async (profileData: any) => {
     try {
@@ -174,7 +129,6 @@ export default function DashboardPage() {
       // Keep local worker list in sync for faster UI updates
       setWorkers((prev) => {
         const next = prev.map((w) => (w.id === updatedUser.id ? updatedUser : w));
-        sessionStorage.setItem("workers_cache_v1", JSON.stringify(next));
         return next;
       });
       
