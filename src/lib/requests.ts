@@ -1,7 +1,4 @@
-import fs from "fs";
-import path from "path";
-
-const REQUESTS_FILE = path.join(process.cwd(), "data", "requests.json");
+import { ensureSchema, getPool } from "@/lib/db";
 
 export type RequestRecord = {
   id: string;
@@ -13,98 +10,93 @@ export type RequestRecord = {
   updatedAt?: string;
 };
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __workersRequestsCache: RequestRecord[] | undefined;
+type DbRequest = {
+  id: string;
+  customer_id: string;
+  worker_id: string;
+  description: string;
+  status: string;
+  created_at: string;
+  updated_at: string | null;
+};
+
+function toRequestRecord(req: DbRequest): RequestRecord {
+  return {
+    id: req.id,
+    customerId: req.customer_id,
+    workerId: req.worker_id,
+    description: req.description,
+    status: req.status,
+    createdAt: req.created_at,
+    updatedAt: req.updated_at || undefined,
+  };
 }
 
-function getCache(): RequestRecord[] {
-  if (!global.__workersRequestsCache) {
-    global.__workersRequestsCache = [];
-  }
-  return global.__workersRequestsCache;
+export async function listRequests() {
+  await ensureSchema();
+  const pool = getPool();
+  const result = await pool.query<DbRequest>(
+    "SELECT * FROM requests ORDER BY created_at DESC"
+  );
+  return result.rows.map(toRequestRecord);
 }
 
-function readRequestsFromSource(): RequestRecord[] {
-  const cache = getCache();
-  try {
-    const raw = fs.readFileSync(REQUESTS_FILE, "utf-8");
-    const diskRequests = JSON.parse(raw || "[]") as RequestRecord[];
-
-    if (cache.length === 0) {
-      global.__workersRequestsCache = diskRequests;
-      return diskRequests;
-    }
-
-    const mergedById = new Map<string, RequestRecord>();
-    [...diskRequests, ...cache].forEach((req) => {
-      mergedById.set(req.id, req);
-    });
-    const merged = [...mergedById.values()];
-    global.__workersRequestsCache = merged;
-    return merged;
-  } catch {
-    return cache;
-  }
+export async function getRequestById(requestId: string) {
+  await ensureSchema();
+  const pool = getPool();
+  const result = await pool.query<DbRequest>(
+    "SELECT * FROM requests WHERE id = $1 LIMIT 1",
+    [requestId]
+  );
+  const req = result.rows[0];
+  return req ? toRequestRecord(req) : null;
 }
 
-function writeRequestsToSource(requests: RequestRecord[]) {
-  global.__workersRequestsCache = requests;
-  try {
-    fs.writeFileSync(REQUESTS_FILE, JSON.stringify(requests, null, 2), "utf-8");
-  } catch {
-    // Hosted serverless environments can be read-only. Keep requests in memory.
-  }
-}
-
-export function listRequests() {
-  return readRequestsFromSource();
-}
-
-export function getRequestById(requestId: string) {
-  return readRequestsFromSource().find((r) => r.id === requestId) || null;
-}
-
-export function createRequest(input: {
+export async function createRequest(input: {
   customerId: string;
   workerId: string;
   description: string;
 }) {
-  const requests = readRequestsFromSource();
-  const newRequest: RequestRecord = {
-    id: `${Date.now()}${Math.random().toString(36).slice(2, 9)}`,
-    customerId: input.customerId,
-    workerId: input.workerId,
-    description: input.description,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  };
-  requests.push(newRequest);
-  writeRequestsToSource(requests);
-  return newRequest;
+  await ensureSchema();
+  const pool = getPool();
+  const id = `${Date.now()}${Math.random().toString(36).slice(2, 9)}`;
+
+  const result = await pool.query<DbRequest>(
+    `INSERT INTO requests (id, customer_id, worker_id, description, status)
+     VALUES ($1, $2, $3, $4, 'pending')
+     RETURNING *`,
+    [id, input.customerId, input.workerId, input.description]
+  );
+  return toRequestRecord(result.rows[0]);
 }
 
-export function updateRequestById(
+export async function updateRequestById(
   requestId: string,
   patch: { description?: string; status?: string }
 ) {
-  const requests = readRequestsFromSource();
-  const index = requests.findIndex((r) => r.id === requestId);
-  if (index === -1) return null;
+  await ensureSchema();
+  const pool = getPool();
+  const current = await getRequestById(requestId);
+  if (!current) return null;
 
-  if (patch.description) requests[index].description = patch.description;
-  if (patch.status) requests[index].status = patch.status;
-  requests[index].updatedAt = new Date().toISOString();
+  const nextDescription = patch.description ?? current.description;
+  const nextStatus = patch.status ?? current.status;
 
-  writeRequestsToSource(requests);
-  return requests[index];
+  const result = await pool.query<DbRequest>(
+    `UPDATE requests
+     SET description = $2, status = $3, updated_at = NOW()
+     WHERE id = $1
+     RETURNING *`,
+    [requestId, nextDescription, nextStatus]
+  );
+  return toRequestRecord(result.rows[0]);
 }
 
-export function deleteRequestById(requestId: string) {
-  const requests = readRequestsFromSource();
-  const index = requests.findIndex((r) => r.id === requestId);
-  if (index === -1) return false;
-  requests.splice(index, 1);
-  writeRequestsToSource(requests);
-  return true;
+export async function deleteRequestById(requestId: string) {
+  await ensureSchema();
+  const pool = getPool();
+  const result = await pool.query("DELETE FROM requests WHERE id = $1", [
+    requestId,
+  ]);
+  return (result.rowCount || 0) > 0;
 }

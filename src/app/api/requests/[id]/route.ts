@@ -13,7 +13,7 @@ export async function GET(
 ) {
   try {
     const { id: requestId } = params instanceof Promise ? await params : params;
-    const req = getRequestById(requestId);
+    const req = await getRequestById(requestId);
 
     if (!req) {
       return NextResponse.json(
@@ -40,7 +40,7 @@ export async function PUT(
     const body = await request.json();
     const { description, status } = body;
 
-    const updatedRequest = updateRequestById(requestId, { description, status });
+    const updatedRequest = await updateRequestById(requestId, { description, status });
     if (!updatedRequest) {
       return NextResponse.json(
         { error: "Request not found" },
@@ -66,7 +66,7 @@ export async function DELETE(
 ) {
   try {
     const { id: requestId } = params instanceof Promise ? await params : params;
-    const deleted = deleteRequestById(requestId);
+    const deleted = await deleteRequestById(requestId);
     if (!deleted) {
       return NextResponse.json(
         { error: "Request not found" },

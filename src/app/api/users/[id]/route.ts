@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { id: userId } = params instanceof Promise ? await params : params;
-    const user = getUserById(userId);
+    const user = await getUserById(userId);
 
     if (!user) {
       return NextResponse.json(

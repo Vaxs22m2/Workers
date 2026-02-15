@@ -38,13 +38,10 @@ export async function POST(request: NextRequest) {
       { expiresIn: "7d" }
     );
 
-    // Return user data (without password) and token
-    const { password: _, ...userWithoutPassword } = user;
-
     return NextResponse.json(
       {
         message: "Login successful",
-        user: userWithoutPassword,
+        user,
         token,
       },
       { status: 200 }

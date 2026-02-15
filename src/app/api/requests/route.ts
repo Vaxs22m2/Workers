@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { createRequest, listRequests } from "@/lib/requests";
+import { getUserById } from "@/lib/users";
 
 const NOTIFICATIONS_FILE = path.join(process.cwd(), "data", "notifications.json");
 export const dynamic = "force-dynamic";
@@ -23,20 +24,9 @@ function writeNotifications(notifications: any[]) {
   );
 }
 
-function getUserInfo(userId: string): any {
-  try {
-    const usersFile = path.join(process.cwd(), "data", "users.json");
-    const raw = fs.readFileSync(usersFile, "utf-8");
-    const users = JSON.parse(raw || "[]");
-    return users.find((u: any) => u.id === userId);
-  } catch (e) {
-    return null;
-  }
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const requests = listRequests();
+    const requests = await listRequests();
     return NextResponse.json(requests);
   } catch (error: any) {
     return NextResponse.json(
@@ -58,12 +48,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newRequest = createRequest({ customerId, workerId, description });
+    const newRequest = await createRequest({ customerId, workerId, description });
 
     // Create notification for the worker
     try {
       const notifications = readNotifications();
-      const customerInfo = getUserInfo(customerId);
+      const customerInfo = await getUserById(customerId);
       const notificationId = `${Date.now()}${Math.random()
         .toString(36)
         .slice(2, 9)}`;

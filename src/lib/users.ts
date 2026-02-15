@@ -1,153 +1,142 @@
-import fs from "fs";
-import path from "path";
 import bcrypt from "bcryptjs";
+import { ensureSchema, getPool } from "@/lib/db";
 
-const DATA_FILE = path.join(process.cwd(), "data", "users.json");
-
-type UserRecord = {
+type DbUser = {
   id: string;
   email: string;
   password: string;
-  fullName?: string;
-  phone?: string;
-  role?: string;
-  createdAt?: string;
-  profile?: Record<string, unknown>;
+  full_name: string | null;
+  phone: string | null;
+  role: string | null;
+  created_at: string;
+  profile: Record<string, unknown> | null;
 };
 
-type UsersCache = {
-  users: UserRecord[];
+type PublicUser = {
+  id: string;
+  email: string;
+  fullName: string;
+  phone: string;
+  role: string;
+  createdAt: string;
+  profile: Record<string, unknown>;
 };
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __workersUsersCache: UsersCache | undefined;
-}
-
-function getCache(): UsersCache {
-  if (!global.__workersUsersCache) {
-    global.__workersUsersCache = { users: [] };
-  }
-  return global.__workersUsersCache;
-}
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-function readUsers(): UserRecord[] {
-  const cache = getCache();
-  try {
-    const raw = fs.readFileSync(DATA_FILE, "utf-8");
-    const diskUsers = (JSON.parse(raw || "[]") as UserRecord[]).map((u) => ({
-      ...u,
-      email: normalizeEmail(u.email),
-    }));
-
-    if (cache.users.length === 0) {
-      cache.users = diskUsers;
-      return cache.users;
-    }
-
-    const mergedById = new Map<string, UserRecord>();
-    [...diskUsers, ...cache.users].forEach((u) => {
-      mergedById.set(u.id, u);
-    });
-    cache.users = [...mergedById.values()];
-    return cache.users;
-  } catch (e) {
-    return cache.users;
-  }
+function toPublicUser(user: DbUser): PublicUser {
+  return {
+    id: user.id,
+    email: user.email,
+    fullName: user.full_name || "",
+    phone: user.phone || "",
+    role: user.role || "",
+    createdAt: user.created_at,
+    profile: user.profile || {},
+  };
 }
 
-function writeUsers(users: UserRecord[]) {
-  const cache = getCache();
-  cache.users = users;
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(users, null, 2), "utf-8");
-  } catch {
-    // In many hosted serverless environments the filesystem is read-only.
-    // Keep data in memory so auth still works for the current warm instance.
-  }
-}
-
-export async function createUser(email: string, password: string, fullName: string, phone: string, role: string) {
+export async function createUser(
+  email: string,
+  password: string,
+  fullName: string,
+  phone: string,
+  role: string
+) {
+  await ensureSchema();
+  const pool = getPool();
   const normalizedEmail = normalizeEmail(email);
-  const users = readUsers();
-  if (users.find((u) => u.email === normalizedEmail)) {
+
+  const existing = await pool.query<DbUser>(
+    "SELECT * FROM users WHERE email = $1 LIMIT 1",
+    [normalizedEmail]
+  );
+  if (existing.rows.length > 0) {
     throw new Error("User already exists");
   }
 
   const hashed = await bcrypt.hash(password, 10);
   const id = `${Date.now()}${Math.random().toString(36).slice(2, 9)}`;
-  const user = {
-    id,
-    email: normalizedEmail,
-    password: hashed,
-    fullName,
-    phone,
-    role,
-    createdAt: new Date().toISOString(),
-  };
-  users.push(user);
-  writeUsers(users);
-  const { password: _, ...without } = user as any;
-  return without;
+
+  const result = await pool.query<DbUser>(
+    `INSERT INTO users (id, email, password, full_name, phone, role, profile)
+     VALUES ($1, $2, $3, $4, $5, $6, '{}'::jsonb)
+     RETURNING *`,
+    [id, normalizedEmail, hashed, fullName, phone, role]
+  );
+
+  return toPublicUser(result.rows[0]);
 }
 
 export async function verifyPassword(email: string, password: string) {
+  await ensureSchema();
+  const pool = getPool();
   const normalizedEmail = normalizeEmail(email);
-  const users = readUsers();
-  const user = users.find((u) => u.email === normalizedEmail);
+
+  const result = await pool.query<DbUser>(
+    "SELECT * FROM users WHERE email = $1 LIMIT 1",
+    [normalizedEmail]
+  );
+  const user = result.rows[0];
   if (!user) return null;
+
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return null;
-  const { password: _, ...without } = user as any;
-  return without;
+
+  return toPublicUser(user);
 }
 
 export async function updateUserProfile(userId: string, profileData: any) {
-  const users = readUsers();
-  const userIndex = users.findIndex((u) => u.id === userId);
-  if (userIndex === -1) {
+  await ensureSchema();
+  const pool = getPool();
+
+  const currentResult = await pool.query<DbUser>(
+    "SELECT * FROM users WHERE id = $1 LIMIT 1",
+    [userId]
+  );
+  const current = currentResult.rows[0];
+  if (!current) {
     throw new Error("User not found");
   }
 
-  // Update top-level user fields
-  if (profileData.fullName) users[userIndex].fullName = profileData.fullName;
-  if (profileData.phone) users[userIndex].phone = profileData.phone;
+  const mergedProfile = {
+    ...(current.profile || {}),
+    ...(profileData.profile || {}),
+  };
 
-  // Initialize profile if it doesn't exist
-  if (!users[userIndex].profile) {
-    users[userIndex].profile = {};
-  }
+  const nextFullName = profileData.fullName ?? current.full_name;
+  const nextPhone = profileData.phone ?? current.phone;
 
-  // Update profile fields (merge with existing profile data)
-  if (profileData.profile) {
-    users[userIndex].profile = {
-      ...users[userIndex].profile,
-      ...profileData.profile,
-    };
-  }
+  const updated = await pool.query<DbUser>(
+    `UPDATE users
+     SET full_name = $2, phone = $3, profile = $4::jsonb
+     WHERE id = $1
+     RETURNING *`,
+    [userId, nextFullName, nextPhone, JSON.stringify(mergedProfile)]
+  );
 
-  writeUsers(users);
-
-  const { password: _, ...without } = users[userIndex] as any;
-  return without;
+  return toPublicUser(updated.rows[0]);
 }
 
-export function getUserById(userId: string) {
-  const users = readUsers();
-  const user = users.find((u) => u.id === userId);
+export async function getUserById(userId: string) {
+  await ensureSchema();
+  const pool = getPool();
+  const result = await pool.query<DbUser>(
+    "SELECT * FROM users WHERE id = $1 LIMIT 1",
+    [userId]
+  );
+  const user = result.rows[0];
   if (!user) return null;
-  const { password: _, ...without } = user as any;
-  return without;
+  return toPublicUser(user);
 }
 
-export function listUsers() {
-  const users = readUsers();
-  return users.map((user) => {
-    const { password: _, ...without } = user as any;
-    return without;
-  });
+export async function listUsers() {
+  await ensureSchema();
+  const pool = getPool();
+  const result = await pool.query<DbUser>(
+    "SELECT * FROM users ORDER BY created_at DESC"
+  );
+  return result.rows.map(toPublicUser);
 }

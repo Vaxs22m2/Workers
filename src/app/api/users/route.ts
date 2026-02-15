@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get("role");
     const lite = searchParams.get("lite") === "1";
 
-    let users = listUsers();
+    let users: any[] = await listUsers();
     if (role) {
       users = users.filter((u: any) => u.role === role);
     }
