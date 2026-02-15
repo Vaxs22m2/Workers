@@ -1,22 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { createRequest, listRequests } from "@/lib/requests";
 
-const REQUESTS_FILE = path.join(process.cwd(), "data", "requests.json");
 const NOTIFICATIONS_FILE = path.join(process.cwd(), "data", "notifications.json");
-
-function readRequests(): any[] {
-  try {
-    const raw = fs.readFileSync(REQUESTS_FILE, "utf-8");
-    return JSON.parse(raw || "[]");
-  } catch (e) {
-    return [];
-  }
-}
-
-function writeRequests(requests: any[]) {
-  fs.writeFileSync(REQUESTS_FILE, JSON.stringify(requests, null, 2), "utf-8");
-}
+export const dynamic = "force-dynamic";
 
 function readNotifications(): any[] {
   try {
@@ -48,7 +36,7 @@ function getUserInfo(userId: string): any {
 
 export async function GET(request: NextRequest) {
   try {
-    const requests = readRequests();
+    const requests = listRequests();
     return NextResponse.json(requests);
   } catch (error: any) {
     return NextResponse.json(
@@ -70,26 +58,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const requests = readRequests();
-    const id = `${Date.now()}${Math.random().toString(36).slice(2, 9)}`;
-
-    const newRequest = {
-      id,
-      customerId,
-      workerId,
-      description,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
-
-    requests.push(newRequest);
-    writeRequests(requests);
+    const newRequest = createRequest({ customerId, workerId, description });
 
     // Create notification for the worker
     try {
       const notifications = readNotifications();
       const customerInfo = getUserInfo(customerId);
-      const notificationId = `${Date.now()}${Math.random().toString(36).slice(2, 9)}`;
+      const notificationId = `${Date.now()}${Math.random()
+        .toString(36)
+        .slice(2, 9)}`;
 
       const notification = {
         id: notificationId,
@@ -97,7 +74,7 @@ export async function POST(request: NextRequest) {
         type: "request",
         title: `New request from ${customerInfo?.fullName || "A customer"}`,
         description: description.substring(0, 100) + (description.length > 100 ? "..." : ""),
-        relatedId: id,
+        relatedId: newRequest.id,
         read: false,
         createdAt: new Date().toISOString(),
       };

@@ -112,6 +112,39 @@ export default function DashboardPage() {
     }
   }, [fetchCustomerRequests, fetchWorkerRequests, loadWorkers, router]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const refresh = () => {
+      if (user.role === "customer") {
+        if (activeTab === "browse") loadWorkers();
+        if (activeTab === "myrequests") fetchCustomerRequests(user.id);
+      } else if (user.role === "worker" && activeTab === "requests") {
+        fetchWorkerRequests(user.id);
+      }
+    };
+
+    const interval = setInterval(refresh, 10000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [
+    activeTab,
+    fetchCustomerRequests,
+    fetchWorkerRequests,
+    loadWorkers,
+    user,
+  ]);
+
   const handleSaveProfile = async (profileData: any) => {
     try {
       if (!user) {

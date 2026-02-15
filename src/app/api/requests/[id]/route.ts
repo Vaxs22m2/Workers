@@ -1,21 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import {
+  deleteRequestById,
+  getRequestById,
+  updateRequestById,
+} from "@/lib/requests";
 
-const REQUESTS_FILE = path.join(process.cwd(), "data", "requests.json");
-
-function readRequests(): any[] {
-  try {
-    const raw = fs.readFileSync(REQUESTS_FILE, "utf-8");
-    return JSON.parse(raw || "[]");
-  } catch (e) {
-    return [];
-  }
-}
-
-function writeRequests(requests: any[]) {
-  fs.writeFileSync(REQUESTS_FILE, JSON.stringify(requests, null, 2), "utf-8");
-}
+export const dynamic = "force-dynamic";
 
 export async function GET(
   request: NextRequest,
@@ -23,8 +13,7 @@ export async function GET(
 ) {
   try {
     const { id: requestId } = params instanceof Promise ? await params : params;
-    const requests = readRequests();
-    const req = requests.find((r: any) => r.id === requestId);
+    const req = getRequestById(requestId);
 
     if (!req) {
       return NextResponse.json(
@@ -51,33 +40,17 @@ export async function PUT(
     const body = await request.json();
     const { description, status } = body;
 
-    const requests = readRequests();
-    const reqIndex = requests.findIndex((r: any) => r.id === requestId);
-
-    if (reqIndex === -1) {
+    const updatedRequest = updateRequestById(requestId, { description, status });
+    if (!updatedRequest) {
       return NextResponse.json(
         { error: "Request not found" },
         { status: 404 }
       );
     }
 
-    // Update description if provided
-    if (description) {
-      requests[reqIndex].description = description;
-    }
-
-    // Update status if provided
-    if (status) {
-      requests[reqIndex].status = status;
-    }
-
-    requests[reqIndex].updatedAt = new Date().toISOString();
-
-    writeRequests(requests);
-
     return NextResponse.json({
       message: "Request updated successfully",
-      request: requests[reqIndex],
+      request: updatedRequest,
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -93,18 +66,13 @@ export async function DELETE(
 ) {
   try {
     const { id: requestId } = params instanceof Promise ? await params : params;
-    const requests = readRequests();
-    const reqIndex = requests.findIndex((r: any) => r.id === requestId);
-
-    if (reqIndex === -1) {
+    const deleted = deleteRequestById(requestId);
+    if (!deleted) {
       return NextResponse.json(
         { error: "Request not found" },
         { status: 404 }
       );
     }
-
-    requests.splice(reqIndex, 1);
-    writeRequests(requests);
 
     return NextResponse.json({
       message: "Request deleted successfully",
