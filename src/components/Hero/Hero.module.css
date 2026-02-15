@@ -6,7 +6,7 @@
         .hero h2 {
             font-size: 68px;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 40px;
         }
 
         .hero h2 span {
@@ -17,7 +17,7 @@
             max-width: 600px;
             margin: 0 auto 24px;
             color: #555;
-            font-size: 18px;
+            font-size: 15px;
         }
 
         .hero button {
@@ -30,3 +30,12 @@
             border-radius: 6px;
             cursor: pointer;
         }
+
+        @media (max-width: 480px) {
+   .hero h2{
+font-size: 56px; 
+  }
+
+  .hero h2 span { font-size: 55px; }
+  .value { font-size: 22px; }
+}

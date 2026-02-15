@@ -6,7 +6,7 @@ import styles from "./dashboard.module.css";
 import ProfileEditModal from "@/components/ProfileEditModal/ProfileEditModal";
 import WorkerProfileModal from "@/components/WorkerProfileModal/WorkerProfileModal";
 import SendRequestModal from "@/components/SendRequestModal/SendRequestModal";
-import Notifications from "@/components/Notifications/Notifications";
+import Messenger from "@/components/Notifications/Notifications";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -345,7 +345,7 @@ export default function DashboardPage() {
         <h1 className={styles.title}>Worker Dashboard</h1>
         <div className={styles.headerRight}>
           <div className={styles.accountInfo}>Welcome, {user.fullName || user.email}</div>
-          {user && <Notifications userId={user.id} />}
+          {user && <Messenger user={user} />}
         </div>
       </div>
 

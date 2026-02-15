@@ -1,6 +1,9 @@
+'use client';
 import styles from './Categories.module.css';
+import { useRouter } from "next/navigation";      
 
 export default function Services() {
+  const router = useRouter();
   return (
     <div className={styles.container}>
       <section>
@@ -17,7 +20,7 @@ export default function Services() {
             <p className={styles['service-description']}>
               Check plumber profiles and portfolios. Choose a trusted plumber for the job.
             </p>
-            <button className={styles['more-btn']}>More</button>
+            <button onClick={() => router.push("/dashboard")}  className={styles['more-btn']}>More</button>
           </div>
 
           <div className={styles['service-card']}>
@@ -30,11 +33,11 @@ export default function Services() {
             <p className={styles['service-description']}>
               Check Electrics profiles and portfolios. Choose a trusted Electrics for the job.
             </p>
-            <button className={styles['more-btn']}>More</button>
+            <button onClick={() => router.push("/dashboard")} className={styles['more-btn']}>More</button>
           </div>
 
           <div className={`${styles['service-card']} ${styles.placeholder}`}>
-            <button className={styles['more-btn']}>More</button>
+            <button  onClick={() => router.push("/dashboard")} className={styles['more-btn']}>More</button>
           </div>
         </div>
       </section>

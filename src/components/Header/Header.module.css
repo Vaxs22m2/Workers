@@ -16,11 +16,21 @@
 }
 
 .logo {
-  font-weight: 500;
+  font-weight: 700;
   font-family: 'Inter', sans-serif;
   font-size: 28px;
   color: rgba(0, 102, 0, 1);
+}
 
+/* Desktop Nav */
+.desktopNav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.welcome {
+  margin-right: 8px;
 }
 
 .button {
@@ -29,4 +39,60 @@
   font-weight: 600;
   padding: 8px 14px;
   border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+/* Hamburger (hidden by default) */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.hamburger span {
+  width: 24px;
+  height: 2px;
+  background: #111827;
+}
+
+/* Mobile Menu */
+.mobileMenu {
+  display: none;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 420px) {
+  .desktopNav {
+    display: none;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+
+  .mobileMenu {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-top: 1px solid #e5e7eb;
+    background: white;
+  }
+
+  .mobileButton {
+    background: #111827;
+    color: #fff;
+    font-weight: 600;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .mobileWelcome {
+    font-weight: 500;
+  }
 }

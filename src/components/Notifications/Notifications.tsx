@@ -3,73 +3,162 @@
 import { useState, useEffect } from "react";
 import styles from "./Notifications.module.css";
 
-interface Notification {
+interface CurrentUser {
   id: string;
-  userId: string;
-  type: string;
-  title: string;
-  description: string;
-  relatedId: string;
-  read: boolean;
+  fullName?: string;
+  role?: string;
+}
+
+interface Message {
+  id: string;
+  requestId: string;
+  senderId: string;
+  senderName?: string;
+  senderRole?: string;
+  recipientId: string;
+  message: string;
   createdAt: string;
 }
 
 interface NotificationsProps {
-  userId: string;
+  user: CurrentUser;
 }
 
-export default function Notifications({ userId }: NotificationsProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+interface Thread {
+  key: string;
+  requestId: string;
+  otherUserId: string;
+  otherName: string;
+  lastMessage: Message;
+}
+
+function getThreadKey(message: Message, currentUserId: string) {
+  const otherUserId =
+    message.senderId === currentUserId ? message.recipientId : message.senderId;
+  return `${message.requestId}:${otherUserId}`;
+}
+
+export default function Notifications({ user }: NotificationsProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [selectedThreadKey, setSelectedThreadKey] = useState<string>("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [usersMap, setUsersMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetchNotifications();
-    // Poll for new notifications every 5 seconds
-    const interval = setInterval(fetchNotifications, 5000);
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 5000);
     return () => clearInterval(interval);
-  }, [userId]);
+  }, [user.id]);
 
-  const fetchNotifications = async () => {
+  const fetchMessages = async () => {
     try {
-      const response = await fetch(`/api/notifications?userId=${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data);
+      const [messagesRes, usersRes] = await Promise.all([
+        fetch("/api/messages"),
+        fetch("/api/users"),
+      ]);
+      let nameMap: Record<string, string> = {};
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        const users = Array.isArray(usersData) ? usersData : usersData.users || [];
+        users.forEach((u: any) => {
+          nameMap[u.id] = u.fullName || u.email || "User";
+        });
+        setUsersMap(nameMap);
+      }
+
+      if (messagesRes.ok) {
+        const data = (await messagesRes.json()) as Message[];
+        const myMessages = data.filter(
+          (m) => m.senderId === user.id || m.recipientId === user.id
+        );
+        myMessages.sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        setMessages(myMessages);
+
+        const threadMap = new Map<string, Thread>();
+        myMessages.forEach((msg) => {
+          const key = getThreadKey(msg, user.id);
+          const otherUserId =
+            msg.senderId === user.id ? msg.recipientId : msg.senderId;
+          const otherName =
+            nameMap[otherUserId] || usersMap[otherUserId] || msg.senderName || `User ${otherUserId}`;
+          const existing = threadMap.get(key);
+          if (
+            !existing ||
+            new Date(msg.createdAt).getTime() >
+              new Date(existing.lastMessage.createdAt).getTime()
+          ) {
+            threadMap.set(key, {
+              key,
+              requestId: msg.requestId,
+              otherUserId,
+              otherName,
+              lastMessage: msg,
+            });
+          }
+        });
+
+        const sortedThreads = [...threadMap.values()].sort(
+          (a, b) =>
+            new Date(b.lastMessage.createdAt).getTime() -
+            new Date(a.lastMessage.createdAt).getTime()
+        );
+        setThreads(sortedThreads);
+        if (!selectedThreadKey && sortedThreads.length > 0) {
+          setSelectedThreadKey(sortedThreads[0].key);
+        }
       }
     } catch (error) {
-      console.error("Failed to fetch notifications:", error);
+      console.error("Failed to fetch messages:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const activeThread = threads.find((thread) => thread.key === selectedThreadKey);
+  const activeMessages = activeThread
+    ? messages.filter((m) => getThreadKey(m, user.id) === activeThread.key)
+    : [];
 
-  const markAsRead = async (notificationId: string) => {
+  const handleSend = async () => {
+    if (!activeThread || !draft.trim() || sending) return;
+
+    setSending(true);
     try {
-      const response = await fetch("/api/notifications", {
-        method: "PUT",
+      const response = await fetch("/api/messages", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          notificationId,
-          read: true,
+          requestId: activeThread.requestId,
+          senderId: user.id,
+          senderName: user.fullName || "User",
+          senderRole: user.role || "user",
+          recipientId: activeThread.otherUserId,
+          message: draft.trim(),
         }),
       });
 
       if (response.ok) {
-        setNotifications(
-          notifications.map((n) =>
-            n.id === notificationId ? { ...n, read: true } : n
-          )
-        );
+        setDraft("");
+        await fetchMessages();
       }
     } catch (error) {
-      console.error("Failed to mark notification as read:", error);
+      console.error("Failed to send message:", error);
+    } finally {
+      setSending(false);
     }
   };
+
+  const messageCount = messages.length;
 
   return (
     <div className={styles.notificationContainer}>
@@ -77,64 +166,96 @@ export default function Notifications({ userId }: NotificationsProps) {
         className={styles.bellIcon}
         onClick={() => setShowDropdown(!showDropdown)}
       >
-        🔔
-        {unreadCount > 0 && (
-          <span className={styles.badge}>{unreadCount}</span>
-        )}
+        Messenger
+        {messageCount > 0 && <span className={styles.badge}>{messageCount}</span>}
       </button>
 
       {showDropdown && (
         <div className={styles.dropdown}>
-          <div className={styles.header}>
-            <h3>Notifications</h3>
-            {unreadCount > 0 && (
-              <span className={styles.unreadCount}>{unreadCount} new</span>
-            )}
-          </div>
-
-          <div className={styles.list}>
-            {loading ? (
-              <p className={styles.empty}>Loading...</p>
-            ) : notifications.length === 0 ? (
-              <p className={styles.empty}>No notifications yet</p>
-            ) : (
-              notifications
-                .sort(
-                  (a, b) =>
-                    new Date(b.createdAt).getTime() -
-                    new Date(a.createdAt).getTime()
-                )
-                .map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`${styles.notificationItem} ${
-                      !notification.read ? styles.unread : ""
+          {loading ? (
+            <p className={styles.empty}>Loading...</p>
+          ) : threads.length === 0 ? (
+            <p className={styles.empty}>No chats yet</p>
+          ) : (
+            <div className={styles.chatLayout}>
+              <div className={styles.threadList}>
+                {threads.map((thread) => (
+                  <button
+                    key={thread.key}
+                    className={`${styles.threadItem} ${
+                      thread.key === selectedThreadKey ? styles.threadItemActive : ""
                     }`}
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={() => setSelectedThreadKey(thread.key)}
                   >
-                    <div className={styles.icon}>
-                      {notification.type === "request" ? "📋" : "🔔"}
+                    <div className={styles.threadName}>{thread.otherName}</div>
+                    <div className={styles.threadPreview}>
+                      {thread.lastMessage.message}
                     </div>
-                    <div className={styles.content}>
-                      <div className={styles.title}>{notification.title}</div>
-                      <div className={styles.description}>
-                        {notification.description}
-                      </div>
-                      <div className={styles.time}>
-                        {new Date(notification.createdAt).toLocaleDateString()}{" "}
-                        {new Date(notification.createdAt).toLocaleTimeString(
-                          [],
-                          { hour: "2-digit", minute: "2-digit" }
-                        )}
+                    <div className={styles.time}>
+                      {new Date(thread.lastMessage.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className={styles.chatPanel}>
+                <div className={styles.header}>
+                  <h3>{activeThread?.otherName || "Chat"}</h3>
+                  <span className={styles.unreadCount}>
+                    {activeMessages.length} messages
+                  </span>
+                </div>
+
+                <div className={styles.list}>
+                  {activeMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`${styles.notificationItem} ${
+                        msg.senderId === user.id
+                          ? styles.ownMessage
+                          : styles.otherMessage
+                      }`}
+                    >
+                      <div className={styles.content}>
+                        <div className={styles.description}>{msg.message}</div>
+                        <div className={styles.time}>
+                          {new Date(msg.createdAt).toLocaleDateString()}{" "}
+                          {new Date(msg.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
                       </div>
                     </div>
-                    {!notification.read && (
-                      <div className={styles.unreadDot}></div>
-                    )}
-                  </div>
-                ))
-            )}
-          </div>
+                  ))}
+                </div>
+
+                <div className={styles.composer}>
+                  <input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    className={styles.input}
+                    placeholder="Type a message..."
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSend();
+                      }
+                    }}
+                  />
+                  <button
+                    className={styles.sendBtn}
+                    onClick={handleSend}
+                    disabled={sending || !draft.trim()}
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

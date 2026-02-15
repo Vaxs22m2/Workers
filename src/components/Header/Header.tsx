@@ -7,17 +7,17 @@ import { useEffect, useState } from "react";
 export default function Header() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem("user");
       if (stored) setUser(JSON.parse(stored));
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
   }, []);
 
   const handlePrimary = () => {
+    setMenuOpen(false);
     if (user) router.push("/dashboard");
     else router.push("/login");
   };
@@ -26,6 +26,7 @@ export default function Header() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
+    setMenuOpen(false);
     router.push("/");
   };
 
@@ -33,9 +34,13 @@ export default function Header() {
     <header className={styles.header}>
       <div className={styles.container}>
         <div className={styles.logo}>Workers</div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+
+        {/* Desktop Navigation */}
+        <div className={styles.desktopNav}>
           {user && (
-            <span style={{ marginRight: 8 }}>Welcome, {user.fullName?.split(" ")[0]}</span>
+            <span className={styles.welcome}>
+              Welcome, {user.fullName?.split(" ")[0]}
+            </span>
           )}
           <button className={styles.button} onClick={handlePrimary}>
             {user ? "Dashboard" : "Get Started"}
@@ -46,7 +51,36 @@ export default function Header() {
             </button>
           )}
         </div>
+
+        {/* Hamburger */}
+        <div
+          className={styles.hamburger}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          <span />
+          <span />
+          <span />
+        </div>
       </div>
+
+      {/* Mobile Menu */}
+      {menuOpen && (
+        <div className={styles.mobileMenu}>
+          {user && (
+            <span className={styles.mobileWelcome}>
+              Welcome, {user.fullName?.split(" ")[0]}
+            </span>
+          )}
+          <button className={styles.mobileButton} onClick={handlePrimary}>
+            {user ? "Dashboard" : "Get Started"}
+          </button>
+          {user && (
+            <button className={styles.mobileButton} onClick={handleLogout}>
+              Log Out
+            </button>
+          )}
+        </div>
+      )}
     </header>
   );
 }
