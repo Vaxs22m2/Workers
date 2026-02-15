@@ -7,7 +7,12 @@ declare global {
 
 let schemaReady = false;
 
+export function isDbConfigured() {
+  return Boolean(process.env.DATABASE_URL);
+}
+
 export async function ensureSchema() {
+  if (!isDbConfigured()) return;
   const pool = getPool();
   if (schemaReady) return;
   await pool.query(`
@@ -43,7 +48,7 @@ function getPool(): Pool {
 
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL is required to use Neon/Postgres storage");
+    throw new Error("DATABASE_URL is missing");
   }
 
   const pool = new Pool({
