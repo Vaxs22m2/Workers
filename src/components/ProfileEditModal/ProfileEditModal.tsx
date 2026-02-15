@@ -30,6 +30,43 @@ export default function ProfileEditModal({ user, onClose, onSave }: ProfileEditM
   const [profileImagePreview, setProfileImagePreview] = useState(profile.profilePicture || "");
   const MAX_IMAGES = 5;
 
+  const compressImage = async (
+    file: File,
+    maxWidth: number,
+    maxHeight: number,
+    quality = 0.75
+  ): Promise<string> => {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string) || "");
+      reader.onerror = () => reject(new Error("Failed to read image"));
+      reader.readAsDataURL(file);
+    });
+
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = dataUrl;
+    });
+
+    let width = image.width;
+    let height = image.height;
+    if (width > maxWidth || height > maxHeight) {
+      const ratio = Math.min(maxWidth / width, maxHeight / height);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return dataUrl;
+    ctx.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", quality);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -38,47 +75,39 @@ export default function ProfileEditModal({ user, onClose, onSave }: ProfileEditM
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
+      compressImage(file, 1024, 1024, 0.78)
+        .then((base64) => {
         setProfileImagePreview(base64);
         setFormData((prev) => ({ ...prev, profilePicture: base64 }));
-      };
-      reader.readAsDataURL(file);
+        })
+        .catch(() => setError("Failed to process profile image"));
     }
   };
 
-  const handleWorkImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleWorkImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newImages: string[] = [];
-      let filesProcessed = 0;
+      const remaining = MAX_IMAGES - formData.workImages.length;
+      const selected = Array.from(files);
+      const filesToUse = selected.slice(0, Math.max(0, remaining));
 
-      Array.from(files).forEach((file) => {
-        // Check if adding this file would exceed max
-        if (formData.workImages.length + newImages.length < MAX_IMAGES) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            newImages.push(reader.result as string);
-            filesProcessed++;
-            if (filesProcessed === files.length) {
-              setFormData((prev) => ({
-                ...prev,
-                workImages: [...prev.workImages, ...newImages],
-              }));
-            }
-          };
-          reader.readAsDataURL(file);
-        } else {
-          filesProcessed++;
-        }
-      });
+      if (selected.length > remaining) {
+        setError(`Maximum ${MAX_IMAGES} images allowed`);
+      } else {
+        setError("");
+      }
 
-      setError(
-        formData.workImages.length + newImages.length > MAX_IMAGES
-          ? `Maximum ${MAX_IMAGES} images allowed`
-          : ""
-      );
+      try {
+        const compressed = await Promise.all(
+          filesToUse.map((file) => compressImage(file, 1280, 1280, 0.75))
+        );
+        setFormData((prev) => ({
+          ...prev,
+          workImages: [...prev.workImages, ...compressed],
+        }));
+      } catch {
+        setError("Failed to process one or more work images");
+      }
     }
   };
 

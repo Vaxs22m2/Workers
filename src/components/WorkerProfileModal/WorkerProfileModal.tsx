@@ -6,14 +6,12 @@ interface WorkerProfileModalProps {
   worker: any;
   onClose: () => void;
   onSendRequest: () => void;
-  onChat: () => void;
 }
 
 export default function WorkerProfileModal({
   worker,
   onClose,
   onSendRequest,
-  onChat,
 }: WorkerProfileModalProps) {
   const profile = worker.profile || {};
 
@@ -94,9 +92,6 @@ export default function WorkerProfileModal({
           <div className={styles.actions}>
             <button className={styles.cancelBtn} onClick={onClose}>
               Close
-            </button>
-            <button className={styles.chatBtn} onClick={onChat}>
-              Chat
             </button>
             <button className={styles.sendBtn} onClick={onSendRequest}>
               Send Request

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateUserProfile, getUserById } from "@/lib/users";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> | { id: string } }
@@ -17,7 +19,11 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(user);
+    return NextResponse.json(user, {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    });
   } catch (error: any) {
     console.error("GET error:", error);
     return NextResponse.json(
@@ -46,7 +52,12 @@ export async function PUT(
         message: "Profile updated successfully",
         user: updatedUser,
       },
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
     );
   } catch (error: any) {
     console.error("PUT error:", error);

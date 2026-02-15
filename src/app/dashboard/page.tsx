@@ -6,7 +6,6 @@ import styles from "./dashboard.module.css";
 import ProfileEditModal from "@/components/ProfileEditModal/ProfileEditModal";
 import WorkerProfileModal from "@/components/WorkerProfileModal/WorkerProfileModal";
 import SendRequestModal from "@/components/SendRequestModal/SendRequestModal";
-import Messenger from "@/components/Notifications/Notifications";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -25,18 +24,17 @@ export default function DashboardPage() {
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [editingDescription, setEditingDescription] = useState<string>("");
   const [workerRequests, setWorkerRequests] = useState<any[]>([]);
-  const [showMessageModal, setShowMessageModal] = useState(false);
-  const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
-  const [activeChatRequestId, setActiveChatRequestId] = useState<string | null>(null);
-  const [messageText, setMessageText] = useState<string>("");
 
   const loadWorkers = useCallback(async () => {
     setWorkersLoading(true);
     try {
-      const response = await fetch("/api/users");
+      const response = await fetch("/api/users?role=worker&lite=1", {
+        cache: "no-store",
+      });
       const data = await response.json();
       const list = Array.isArray(data) ? data : data.users || [];
-      setWorkers(list.filter((x: any) => x.role === "worker"));
+      setWorkers(list);
+      sessionStorage.setItem("workers_cache_v1", JSON.stringify(list));
     } catch (err) {
       console.error(err);
     } finally {
@@ -79,6 +77,17 @@ export default function DashboardPage() {
       // Set default tab based on user role
       if (u.role === "customer") {
         setActiveTab("browse");
+        const workersCache = sessionStorage.getItem("workers_cache_v1");
+        if (workersCache) {
+          try {
+            const parsed = JSON.parse(workersCache);
+            if (Array.isArray(parsed)) {
+              setWorkers(parsed);
+            }
+          } catch {
+            // ignore malformed cache
+          }
+        }
         loadWorkers();
         // Fetch customer's requests
         fetchCustomerRequests(u.id);
@@ -120,6 +129,13 @@ export default function DashboardPage() {
       // Update local state
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      // Keep local worker list in sync for faster UI updates
+      setWorkers((prev) => {
+        const next = prev.map((w) => (w.id === updatedUser.id ? updatedUser : w));
+        sessionStorage.setItem("workers_cache_v1", JSON.stringify(next));
+        return next;
+      });
       
       // Refresh workers list if customer
       if (user.role === "customer") {
@@ -289,74 +305,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleOpenMessage = (request: any) => {
-    // Fetch customer info
-    const customerId = request.customerId;
-    fetch(`/api/users/${customerId}`)
-      .then((r) => r.json())
-      .then((customer) => {
-        setSelectedChatUser(customer);
-        setActiveChatRequestId(request.id);
-        setShowMessageModal(true);
-      })
-      .catch((err) => console.error(err));
-  };
-
-  const handleOpenChatFromProfile = (worker: any) => {
-    const existingRequest = customerRequests.find((req: any) => req.workerId === worker.id);
-    if (!existingRequest) {
-      alert("Send a request to this worker first, then you can chat.");
-      return;
-    }
-    setSelectedChatUser(worker);
-    setActiveChatRequestId(existingRequest.id);
-    setShowWorkerProfile(false);
-    setShowMessageModal(true);
-  };
-
-  const handleSendMessage = async () => {
-    if (!activeChatRequestId || !selectedChatUser) {
-      alert("Chat context is missing");
-      return;
-    }
-
-    if (!messageText.trim()) {
-      alert("Please enter a message");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          requestId: activeChatRequestId,
-          senderId: user.id,
-          senderName: user.fullName,
-          senderRole: user.role || "user",
-          recipientId: selectedChatUser.id,
-          message: messageText,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to send message");
-      }
-
-      setMessageText("");
-      setShowMessageModal(false);
-      setActiveChatRequestId(null);
-      alert("Message sent successfully!");
-    } catch (error: any) {
-      console.error("Error sending message:", error);
-      alert(error.message || "Failed to send message");
-    }
-  };
-
   const normalizedLocationFilter = locationFilter.toLowerCase();
   const normalizedSkillQuery = skillQuery.toLowerCase();
   const normalizedCategory = category.toLowerCase();
@@ -396,7 +344,6 @@ export default function DashboardPage() {
         <h1 className={styles.title}>Worker Dashboard</h1>
         <div className={styles.headerRight}>
           <div className={styles.accountInfo}>Welcome, {user.fullName || user.email}</div>
-          {user && <Messenger user={user} />}
         </div>
       </div>
 
@@ -441,7 +388,6 @@ export default function DashboardPage() {
           ) : (
             <div className={styles.requestsList}>
               {workerRequests.map((req: any) => {
-                const customer = req.customerInfo;
                 return (
                   <div key={req.id} className={styles.requestCard}>
                     <div className={styles.requestHeader}>
@@ -460,20 +406,12 @@ export default function DashboardPage() {
                       <p className={styles.requestDescription}>{req.description}</p>
                       <div className={styles.workerRequestActions}>
                         {req.status !== "accepted" && (
-                          <>
-                            <button
-                              className={styles.applyBtn}
-                              onClick={() => handleApplyRequest(req.id)}
-                            >
-                              Accept Request
-                            </button>
-                            <button
-                              className={styles.messageBtn}
-                              onClick={() => handleOpenMessage(req)}
-                            >
-                              Message Customer
-                            </button>
-                          </>
+                          <button
+                            className={styles.applyBtn}
+                            onClick={() => handleApplyRequest(req.id)}
+                          >
+                            Accept Request
+                          </button>
                         )}
                         <button
                           className={styles.deleteWorkerBtn}
@@ -659,7 +597,6 @@ export default function DashboardPage() {
             setShowWorkerProfile(false);
             setSelectedWorker(null);
           }} 
-          onChat={() => handleOpenChatFromProfile(selectedWorker)}
           onSendRequest={() => {
             setShowWorkerProfile(false);
             setShowSendRequest(true);
@@ -677,40 +614,7 @@ export default function DashboardPage() {
           onSubmit={handleSendRequest} 
         />
       )}
-
-      {showMessageModal && selectedChatUser && (
-        <div className={styles.messageOverlay} onClick={() => setShowMessageModal(false)}>
-          <div className={styles.messageModal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.messageHeader}>
-              <h3>Message to {selectedChatUser.fullName}</h3>
-              <button className={styles.messageClose} onClick={() => setShowMessageModal(false)}>✕</button>
-            </div>
-            <div className={styles.messageContent}>
-              <textarea
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                className={styles.messageTextarea}
-                placeholder="Type your message here..."
-                rows={5}
-              />
-            </div>
-            <div className={styles.messageActions}>
-              <button
-                className={styles.messageCancelBtn}
-                onClick={() => setShowMessageModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className={styles.messageSendBtn}
-                onClick={handleSendMessage}
-              >
-                Send Message
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
+
