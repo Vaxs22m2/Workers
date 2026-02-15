@@ -12,9 +12,11 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<"customer" | "worker">("customer");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       if (isSignUp) {
         const res = await fetch("/api/auth/signup", {
@@ -53,11 +55,18 @@ export default function LoginPage() {
     } catch (error) {
       console.error(error);
       alert("Something went wrong");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <main className={styles.container}>
+      {isSubmitting && (
+        <div className={styles.loadingBar}>
+          <div className={styles.loadingBarInner} />
+        </div>
+      )}
       <form className={styles.form} onSubmit={handleSubmit}>
         <h1 className={styles.title}>{isSignUp ? "Create Account" : "Welcome Back"}</h1>
 
@@ -121,14 +130,15 @@ export default function LoginPage() {
           />
         </label>
 
-        <button className={styles.button} type="submit">
-          {isSignUp ? "Create account" : "Sign in"}
+        <button className={styles.button} type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Please wait..." : isSignUp ? "Create account" : "Sign in"}
         </button>
 
         <button
           type="button"
           className={styles.reg}
           onClick={() => setIsSignUp(!isSignUp)}
+          disabled={isSubmitting}
         >
           {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
         </button>

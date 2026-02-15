@@ -195,32 +195,9 @@ export default function Notifications({ user }: NotificationsProps) {
             <p className={styles.empty}>No chats yet</p>
           ) : (
             <div className={styles.chatLayout}>
-              <div className={styles.threadList}>
-                {threads.map((thread) => (
-                  <button
-                    key={thread.key}
-                    className={`${styles.threadItem} ${
-                      thread.key === selectedThreadKey ? styles.threadItemActive : ""
-                    }`}
-                    onClick={() => setSelectedThreadKey(thread.key)}
-                  >
-                    <div className={styles.threadName}>{thread.otherName}</div>
-                    <div className={styles.threadPreview}>
-                      {thread.lastMessage.message}
-                    </div>
-                    <div className={styles.time}>
-                      {new Date(thread.lastMessage.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
               <div className={styles.chatPanel}>
                 <div className={styles.header}>
-                  <h3>{activeThread?.otherName || "Chat"}</h3>
+                  <h3>{activeThread?.otherName || "Recent Chat"}</h3>
                   <span className={styles.unreadCount}>
                     {activeMessages.length} messages
                   </span>

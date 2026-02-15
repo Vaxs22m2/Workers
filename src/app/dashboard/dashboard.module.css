@@ -177,6 +177,47 @@
   margin-top: 18px;
 }
 
+.loadingBarWrap {
+  margin-bottom: 14px;
+}
+
+.loadingBarTrack {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: #eaf0ff;
+  overflow: hidden;
+}
+
+.loadingBarFill {
+  width: 30%;
+  height: 100%;
+  background: #0b5cff;
+  border-radius: inherit;
+  animation: workers-loading 1s ease-in-out infinite;
+}
+
+.loadingText {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.emptyWorkers {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #555;
+}
+
+@keyframes workers-loading {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
 .workerCard {
   background: #fff;
 

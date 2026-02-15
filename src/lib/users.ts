@@ -143,3 +143,11 @@ export function getUserById(userId: string) {
   const { password: _, ...without } = user as any;
   return without;
 }
+
+export function listUsers() {
+  const users = readUsers();
+  return users.map((user) => {
+    const { password: _, ...without } = user as any;
+    return without;
+  });
+}

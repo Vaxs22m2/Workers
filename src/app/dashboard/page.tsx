@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const [category, setCategory] = useState<string>("All Categories");
   const [locationFilter, setLocationFilter] = useState<string>("");
   const [skillQuery, setSkillQuery] = useState<string>("");
+  const [workersLoading, setWorkersLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [editingDescription, setEditingDescription] = useState<string>("");
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const [messageText, setMessageText] = useState<string>("");
 
   const loadWorkers = useCallback(async () => {
+    setWorkersLoading(true);
     try {
       const response = await fetch("/api/users");
       const data = await response.json();
@@ -37,6 +39,8 @@ export default function DashboardPage() {
       setWorkers(list.filter((x: any) => x.role === "worker"));
     } catch (err) {
       console.error(err);
+    } finally {
+      setWorkersLoading(false);
     }
   }, []);
 
@@ -489,6 +493,14 @@ export default function DashboardPage() {
 
       {user.role === "customer" && activeTab === "browse" && (
         <section className={styles.content}>
+          {workersLoading && (
+            <div className={styles.loadingBarWrap}>
+              <div className={styles.loadingBarTrack}>
+                <div className={styles.loadingBarFill} />
+              </div>
+              <div className={styles.loadingText}>Loading workers...</div>
+            </div>
+          )}
           <div className={styles.filterBar}>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={styles.select}>
               <option>All Categories</option>
@@ -502,7 +514,10 @@ export default function DashboardPage() {
           </div>
 
           <div className={styles.grid}>
-            {filteredWorkers.map((w) => (
+            {!workersLoading && filteredWorkers.length === 0 ? (
+              <p className={styles.emptyWorkers}>No workers found.</p>
+            ) : (
+              filteredWorkers.map((w) => (
                 <div key={w.id} className={styles.workerCard}>
                   <div className={styles.cardHeader}>
                     {w.profile?.profilePicture ? (
@@ -533,7 +548,8 @@ export default function DashboardPage() {
                     }}>Send Request</button>
                   </div>
                 </div>
-            ))}
+              ))
+            )}
           </div>
         </section>
       )}

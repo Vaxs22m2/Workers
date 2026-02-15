@@ -105,51 +105,9 @@
 }
 
 .chatLayout {
-  display: grid;
-  grid-template-columns: 240px 1fr;
+  display: block;
   height: 100%;
   min-height: 0;
-}
-
-.threadList {
-  border-right: 1px solid #e6e6e6;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.threadItem {
-  display: block;
-  width: 100%;
-  border: none;
-  border-bottom: 1px solid #f2f2f2;
-  background: #fff;
-  text-align: left;
-  padding: 12px;
-  cursor: pointer;
-}
-
-.threadItem:hover {
-  background: #f8f8f8;
-}
-
-.threadItemActive {
-  background: #f1f5ff;
-}
-
-.threadName {
-  font-size: 13px;
-  font-weight: 700;
-  color: #111;
-  margin-bottom: 4px;
-}
-
-.threadPreview {
-  font-size: 12px;
-  color: #666;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 4px;
 }
 
 .chatPanel {
@@ -157,6 +115,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  height: 100%;
 }
 
 .notificationItem {
@@ -276,18 +235,7 @@
   }
 
   .chatLayout {
-    grid-template-columns: 1fr;
-    grid-template-rows: 140px 1fr;
-  }
-
-  .threadList {
-    border-right: none;
-    border-bottom: 1px solid #e6e6e6;
-    max-height: none;
-  }
-
-  .threadItem {
-    padding: 10px;
+    display: block;
   }
 
   .composer {
