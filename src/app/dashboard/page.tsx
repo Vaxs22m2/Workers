@@ -39,35 +39,23 @@ export default function DashboardPage() {
   const loadWorkers = useCallback(async () => {
     setWorkersLoading(true);
     try {
-      let lastError: unknown = null;
-      for (let i = 0; i < 2; i++) {
-        try {
-          const response = await fetch("/api/users?role=worker&lite=1", {
-            cache: "no-store",
-          });
-          if (!response.ok) {
-            throw new Error(`Failed to load workers: ${response.status}`);
-          }
-
-          const data = await response.json();
-          const list = Array.isArray(data) ? data : data.users || [];
-          if (!Array.isArray(list)) {
-            throw new Error("Invalid workers payload");
-          }
-
-          setWorkers(list);
-          lastError = null;
-          break;
-        } catch (err) {
-          lastError = err;
-          if (i === 0) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
-        }
+      const response = await fetch("/api/users?lite=1", {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to load workers: ${response.status}`);
       }
-      if (lastError) {
-        throw lastError;
+
+      const data = await response.json();
+      const list = Array.isArray(data) ? data : data.users || [];
+      if (!Array.isArray(list)) {
+        throw new Error("Invalid users payload");
       }
+
+      const onlyWorkers = list.filter(
+        (u: any) => (u.role || "").toLowerCase().trim() === "worker"
+      );
+      setWorkers(onlyWorkers);
     } catch (err) {
       console.error(err);
     } finally {
@@ -446,12 +434,7 @@ export default function DashboardPage() {
       {user.role === "customer" && activeTab === "browse" && (
         <section className={styles.content}>
           {workersLoading && (
-            <div className={styles.loadingBarWrap}>
-              <div className={styles.loadingBarTrack}>
-                <div className={styles.loadingBarFill} />
-              </div>
-              <div className={styles.loadingText}>Loading workers...</div>
-            </div>
+            <p className={styles.loadingText}>Loading workers...</p>
           )}
           <div className={styles.filterBar}>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={styles.select}>
