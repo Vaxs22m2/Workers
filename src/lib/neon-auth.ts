@@ -112,44 +112,53 @@ function extractTokenFromSetCookie(setCookieHeader: string | null): string | und
 }
 
 async function callNeon(path: string, body: Record<string, unknown>, origin: string) {
-  const authUrl = getNeonAuthUrl();
-  const response = await fetch(`${authUrl}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      Origin: origin,
-    },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+  try {
+    const authUrl = getNeonAuthUrl();
+    const response = await fetch(`${authUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Origin: origin,
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
 
-  const raw = await response.text();
-  let data: unknown = null;
-  if (raw) {
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      data = { message: raw };
+    const raw = await response.text();
+    let data: unknown = null;
+    if (raw) {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = { message: raw };
+      }
     }
-  }
 
-  const token =
-    extractToken(data) ?? extractTokenFromSetCookie(response.headers.get("set-cookie"));
-  if (!response.ok) {
+    const token =
+      extractToken(data) ?? extractTokenFromSetCookie(response.headers.get("set-cookie"));
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error: extractError(data, "Authentication request failed"),
+      };
+    }
+
+    return {
+      ok: true,
+      status: response.status,
+      token,
+      data,
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unable to reach auth service";
     return {
       ok: false,
-      status: response.status,
-      error: extractError(data, "Authentication request failed"),
+      status: 503,
+      error: message,
     };
   }
-
-  return {
-    ok: true,
-    status: response.status,
-    token,
-    data,
-  };
 }
 
 export async function neonSignUpEmail(input: NeonEmailAuthInput): Promise<NeonAuthResult> {

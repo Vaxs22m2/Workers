@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUser, getUserByEmail } from "@/lib/users";
+import { createUser, getUserByEmail, verifyPassword } from "@/lib/users";
 import { neonSignInEmail } from "@/lib/neon-auth";
 import jwt from "jsonwebtoken";
 
@@ -26,10 +26,34 @@ export async function POST(request: NextRequest) {
       password,
       origin,
     });
+
+    // Backward-compatible fallback for users created before Neon auth integration.
     if (!neonLogin.ok) {
+      const localUser = await verifyPassword(email, password);
+      if (localUser) {
+        const fallbackToken = jwt.sign(
+          {
+            id: localUser.id,
+            email: localUser.email,
+            role: localUser.role,
+          },
+          JWT_SECRET,
+          { expiresIn: "7d" }
+        );
+
+        return NextResponse.json(
+          {
+            message: "Login successful",
+            user: localUser,
+            token: fallbackToken,
+          },
+          { status: 200 }
+        );
+      }
+
       return NextResponse.json(
         { error: neonLogin.error || "Invalid email or password" },
-        { status: neonLogin.status || 401 }
+        { status: neonLogin.status === 0 ? 401 : neonLogin.status || 401 }
       );
     }
 
@@ -37,7 +61,22 @@ export async function POST(request: NextRequest) {
 
     // Backfill local profile if Neon account exists but local profile does not.
     if (!user) {
-      user = await createUser(email, password, email.split("@")[0] || "User", "", "customer");
+      try {
+        user = await createUser(email, password, email.split("@")[0] || "User", "", "customer");
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "";
+        if (!message.toLowerCase().includes("already exists")) {
+          throw error;
+        }
+        user = await getUserByEmail(email);
+      }
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Could not resolve local user profile after authentication" },
+        { status: 500 }
+      );
     }
 
     // Reuse Neon token when present, otherwise keep prior local JWT behavior.
