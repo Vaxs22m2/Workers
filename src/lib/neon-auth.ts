@@ -14,9 +14,9 @@ type NeonEmailAuthInput = {
 };
 
 function getNeonAuthUrl(): string {
-  const baseUrl = process.env.NEON_AUTH_URL?.trim();
+  const baseUrl = process.env.NEON_AUTH_URL?.trim() || process.env.AUTH_URL?.trim();
   if (!baseUrl) {
-    throw new Error("NEON_AUTH_URL is missing");
+    throw new Error("Missing auth URL env var. Set NEON_AUTH_URL (or AUTH_URL).");
   }
   return baseUrl.replace(/\/+$/, "");
 }
