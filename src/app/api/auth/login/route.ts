@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyPassword } from "@/lib/users";
+import { createUser, getUserByEmail } from "@/lib/users";
+import { neonSignInEmail } from "@/lib/neon-auth";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
@@ -17,26 +18,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify credentials
-    const user = await verifyPassword(email, password);
+    const origin = request.headers.get("origin") || request.nextUrl.origin;
 
-    if (!user) {
+    // Authenticate against Neon Auth
+    const neonLogin = await neonSignInEmail({
+      email,
+      password,
+      origin,
+    });
+    if (!neonLogin.ok) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
+        { error: neonLogin.error || "Invalid email or password" },
+        { status: neonLogin.status || 401 }
       );
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    let user = await getUserByEmail(email);
+
+    // Backfill local profile if Neon account exists but local profile does not.
+    if (!user) {
+      user = await createUser(email, password, email.split("@")[0] || "User", "", "customer");
+    }
+
+    // Reuse Neon token when present, otherwise keep prior local JWT behavior.
+    const token =
+      neonLogin.token ||
+      jwt.sign(
+        {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        },
+        JWT_SECRET,
+        { expiresIn: "7d" }
+      );
 
     return NextResponse.json(
       {
@@ -46,10 +61,10 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Login error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to login" },
+      { error: error instanceof Error ? error.message : "Failed to login" },
       { status: 500 }
     );
   }

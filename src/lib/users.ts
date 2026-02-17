@@ -183,7 +183,32 @@ export async function verifyPassword(email: string, password: string) {
   return toPublicUserFromLocal(user);
 }
 
-export async function updateUserProfile(userId: string, profileData: any) {
+export async function getUserByEmail(email: string) {
+  const normalizedEmail = normalizeEmail(email);
+
+  if (isDbConfigured()) {
+    await ensureSchema();
+    const pool = getPool();
+    const result = await pool.query<DbUser>(
+      "SELECT * FROM users WHERE email = $1 LIMIT 1",
+      [normalizedEmail]
+    );
+    const user = result.rows[0];
+    return user ? toPublicUserFromDb(user) : null;
+  }
+
+  const users = readLocalUsers();
+  const user = users.find((u) => u.email === normalizedEmail);
+  return user ? toPublicUserFromLocal(user) : null;
+}
+
+type ProfileUpdateInput = {
+  fullName?: string;
+  phone?: string;
+  profile?: Record<string, unknown>;
+};
+
+export async function updateUserProfile(userId: string, profileData: ProfileUpdateInput) {
   if (isDbConfigured()) {
     await ensureSchema();
     const pool = getPool();
