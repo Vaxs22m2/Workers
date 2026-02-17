@@ -13,10 +13,30 @@ type NeonEmailAuthInput = {
   name?: string;
 };
 
+const DEFAULT_NEON_AUTH_URL =
+  "https://ep-rough-pond-ajxkpqk6.neonauth.c-3.us-east-2.aws.neon.tech/neondb/auth";
+
+function authUrlFromJwks(jwksUrl: string | undefined): string | undefined {
+  const trimmed = jwksUrl?.trim();
+  if (!trimmed) return undefined;
+  return trimmed.replace(/\/+$/, "").replace(/\/\.well-known\/jwks\.json$/, "");
+}
+
 function getNeonAuthUrl(): string {
-  const baseUrl = process.env.NEON_AUTH_URL?.trim() || process.env.AUTH_URL?.trim();
+  const fromJwks =
+    authUrlFromJwks(process.env.NEON_JWKS_URL) || authUrlFromJwks(process.env.JWKS_URL);
+
+  const baseUrl =
+    process.env.NEON_AUTH_URL?.trim() ||
+    process.env.NEXT_PUBLIC_NEON_AUTH_URL?.trim() ||
+    fromJwks ||
+    process.env.AUTH_URL?.trim() ||
+    DEFAULT_NEON_AUTH_URL;
+
   if (!baseUrl) {
-    throw new Error("Missing auth URL env var. Set NEON_AUTH_URL (or AUTH_URL).");
+    throw new Error(
+      "Missing auth URL env var. Set NEON_AUTH_URL (or NEON_JWKS_URL / AUTH_URL)."
+    );
   }
   return baseUrl.replace(/\/+$/, "");
 }
