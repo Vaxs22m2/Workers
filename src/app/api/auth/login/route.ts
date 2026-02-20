@@ -2,11 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUser, getUserByEmail, verifyPassword } from "@/lib/users";
 import { neonSignInEmail } from "@/lib/neon-auth";
 import jwt from "jsonwebtoken";
+import { isDbConfigured } from "@/lib/db";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isDbConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            "Database is not configured. Set DATABASE_URL (or POSTGRES_URL / POSTGRES_URL_NON_POOLING).",
+        },
+        { status: 503 }
+      );
+    }
+
     const body = await request.json();
     const { email, password } = body;
 

@@ -1,14 +1,23 @@
 import { Pool } from "pg";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __workersPgPool: Pool | undefined;
 }
 
 let schemaReady = false;
 
+function resolveDatabaseUrl(): string {
+  return (
+    process.env.DATABASE_URL?.trim() ||
+    process.env.POSTGRES_URL_NON_POOLING?.trim() ||
+    process.env.POSTGRES_URL?.trim() ||
+    process.env.NEON_DATABASE_URL?.trim() ||
+    ""
+  );
+}
+
 export function isDbConfigured() {
-  return Boolean(process.env.DATABASE_URL);
+  return Boolean(resolveDatabaseUrl());
 }
 
 export async function ensureSchema() {
@@ -46,9 +55,11 @@ export async function ensureSchema() {
 function getPool(): Pool {
   if (global.__workersPgPool) return global.__workersPgPool;
 
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = resolveDatabaseUrl();
   if (!connectionString) {
-    throw new Error("DATABASE_URL is missing");
+    throw new Error(
+      "Database connection is missing. Set DATABASE_URL (or POSTGRES_URL / POSTGRES_URL_NON_POOLING)."
+    );
   }
 
   const pool = new Pool({
