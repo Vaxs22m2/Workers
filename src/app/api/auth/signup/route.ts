@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const origin = request.headers.get("origin") || request.nextUrl.origin;
+    const origin = request.headers.get("origin")?.trim() || undefined;
 
     // Create identity in Neon Auth first
     const neonSignup = await neonSignUpEmail({

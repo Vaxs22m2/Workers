@@ -38,7 +38,6 @@ type PublicUser = {
 };
 
 declare global {
-  // eslint-disable-next-line no-var
   var __workersUsersCache: LocalUser[] | undefined;
 }
 
@@ -100,9 +99,13 @@ function readLocalUsers(): LocalUser[] {
 function writeLocalUsers(users: LocalUser[]) {
   global.__workersUsersCache = users;
   try {
+    fs.mkdirSync(path.dirname(USERS_FILE), { recursive: true });
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
-  } catch {
-    // read-only on some hosts; keep in-memory cache.
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "unknown filesystem error";
+    throw new Error(
+      `Local user storage is not writable (${message}). Set DATABASE_URL for persistent auth.`
+    );
   }
 }
 

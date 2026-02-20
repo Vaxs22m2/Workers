@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import styles from "./dashboard.module.css";
+import { clearSession, getSession, saveSession } from "@/lib/session";
 
 const ProfileEditModal = dynamic(
   () => import("@/components/ProfileEditModal/ProfileEditModal"),
@@ -86,29 +87,51 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("user");
-      if (!stored) {
-        router.push("/login");
-        return;
+    const session = getSession();
+    if (!session) {
+      router.replace("/login");
+      return;
+    }
+
+    const bootstrap = async () => {
+      let nextUser: any = session.user;
+      setUser(nextUser);
+
+      try {
+        const response = await fetch(`/api/users/${session.user.id}`, {
+          cache: "no-store",
+        });
+
+        if (response.ok) {
+          const freshUser = await response.json();
+          if (freshUser?.id) {
+            nextUser = freshUser;
+            setUser(freshUser);
+            saveSession({ token: session.token, user: freshUser });
+          }
+        } else if (response.status === 404) {
+          clearSession();
+          router.replace("/login");
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to refresh user profile:", error);
       }
-      const u = JSON.parse(stored);
-      setUser(u);
 
       // Set default tab based on user role
-      if (u.role === "customer") {
+      if (nextUser.role === "customer") {
         setActiveTab("browse");
         loadWorkers();
         // Fetch customer's requests
-        fetchCustomerRequests(u.id);
+        fetchCustomerRequests(nextUser.id);
       } else {
         setActiveTab("requests");
         // Fetch worker's received requests
-        fetchWorkerRequests(u.id);
+        fetchWorkerRequests(nextUser.id);
       }
-    } catch (error) {
-      console.error(error);
-    }
+    };
+
+    void bootstrap();
   }, [fetchCustomerRequests, fetchWorkerRequests, loadWorkers, router]);
 
   const handleSaveProfile = async (profileData: any) => {
@@ -135,7 +158,13 @@ export default function DashboardPage() {
 
       // Update local state
       setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      const session = getSession();
+      if (session) {
+        const saved = saveSession({ token: session.token, user: updatedUser });
+        if (!saved.ok) {
+          console.warn("Failed to refresh saved session user:", saved.error);
+        }
+      }
 
       // Keep local worker list in sync for faster UI updates
       setWorkers((prev) => {

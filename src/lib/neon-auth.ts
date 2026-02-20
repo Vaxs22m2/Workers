@@ -9,7 +9,7 @@ type NeonAuthResult = {
 type NeonEmailAuthInput = {
   email: string;
   password: string;
-  origin: string;
+  origin?: string;
   name?: string;
 };
 
@@ -111,16 +111,21 @@ function extractTokenFromSetCookie(setCookieHeader: string | null): string | und
   return decodeURIComponent(match[1]);
 }
 
-async function callNeon(path: string, body: Record<string, unknown>, origin: string) {
+async function callNeon(path: string, body: Record<string, unknown>, origin?: string) {
   try {
     const authUrl = getNeonAuthUrl();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+    const safeOrigin = origin?.trim();
+    if (safeOrigin) {
+      headers.Origin = safeOrigin;
+    }
+
     const response = await fetch(`${authUrl}${path}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Origin: origin,
-      },
+      headers,
       body: JSON.stringify(body),
       cache: "no-store",
     });

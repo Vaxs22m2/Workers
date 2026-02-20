@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./login.module.css";
+import { getSession, saveSession } from "@/lib/session";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,9 +17,8 @@ export default function LoginPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
-    if (storedUser && token) {
+    const session = getSession();
+    if (session) {
       router.replace("/dashboard");
       return;
     }
@@ -41,8 +41,11 @@ export default function LoginPage() {
           return;
         }
         if (data?.token && data?.user) {
-          localStorage.setItem("token", data.token);
-          localStorage.setItem("user", JSON.stringify(data.user));
+          const saved = saveSession({ token: data.token, user: data.user });
+          if (!saved.ok) {
+            alert(saved.error || "Failed to save login session");
+            return;
+          }
           router.push("/dashboard");
           return;
         }
@@ -59,8 +62,11 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem("token", loginData.token);
-      localStorage.setItem("user", JSON.stringify(loginData.user));
+      const saved = saveSession({ token: loginData.token, user: loginData.user });
+      if (!saved.ok) {
+        alert(saved.error || "Failed to save login session");
+        return;
+      }
 
       router.push("/dashboard");
     } catch (error) {

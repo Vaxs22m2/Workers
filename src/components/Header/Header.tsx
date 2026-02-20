@@ -2,29 +2,25 @@
 
 import { useRouter } from "next/navigation";
 import styles from "./Header.module.css";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { clearSession, getSession, type SessionUser } from "@/lib/session";
 
 export default function Header() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SessionUser | null>(() => getSession()?.user || null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("user");
-      if (stored) setUser(JSON.parse(stored));
-    } catch (e) {}
-  }, []);
-
   const handlePrimary = () => {
+    const session = getSession();
+    if (session && !user) setUser(session.user);
+    if (!session && user) setUser(null);
     setMenuOpen(false);
-    if (user) router.push("/dashboard");
+    if (session) router.push("/dashboard");
     else router.push("/login");
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearSession();
     setUser(null);
     setMenuOpen(false);
     router.push("/");

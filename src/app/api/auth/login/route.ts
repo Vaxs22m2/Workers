@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const origin = request.headers.get("origin") || request.nextUrl.origin;
+    const origin = request.headers.get("origin")?.trim() || undefined;
 
     // Authenticate against Neon Auth
     const neonLogin = await neonSignInEmail({
