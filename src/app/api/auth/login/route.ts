@@ -3,6 +3,7 @@ import { createUser, getUserByEmail, verifyPassword } from "@/lib/users";
 import { neonSignInEmail } from "@/lib/neon-auth";
 import jwt from "jsonwebtoken";
 import { isDbConfigured } from "@/lib/db";
+import { resolveAuthOrigin } from "@/lib/auth-origin";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
@@ -19,7 +20,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password } = body;
+    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body?.password === "string" ? body.password : "";
 
     // Validate required fields
     if (!email || !password) {
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const origin = request.headers.get("origin")?.trim() || undefined;
+    const origin = resolveAuthOrigin(request);
 
     // Authenticate against Neon Auth
     const neonLogin = await neonSignInEmail({

@@ -3,6 +3,7 @@ import { createUser } from "@/lib/users";
 import { neonSignUpEmail } from "@/lib/neon-auth";
 import jwt from "jsonwebtoken";
 import { isDbConfigured } from "@/lib/db";
+import { resolveAuthOrigin } from "@/lib/auth-origin";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
@@ -19,7 +20,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password, fullName, phone, role } = body;
+    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body?.password === "string" ? body.password : "";
+    const fullName = typeof body?.fullName === "string" ? body.fullName.trim() : "";
+    const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
+    const role = typeof body?.role === "string" ? body.role.trim().toLowerCase() : "";
 
     // Validate required fields
     if (!email || !password || !fullName || !phone || !role) {
@@ -39,9 +44,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate password length
-    if (password.length < 6) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
+        { error: "Password must be at least 8 characters" },
         { status: 400 }
       );
     }
@@ -54,7 +59,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const origin = request.headers.get("origin")?.trim() || undefined;
+    const origin = resolveAuthOrigin(request);
 
     // Create identity in Neon Auth first
     const neonSignup = await neonSignUpEmail({

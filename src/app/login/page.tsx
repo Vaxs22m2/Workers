@@ -33,7 +33,13 @@ export default function LoginPage() {
         const res = await fetch("/api/auth/signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, fullName, phone, role }),
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+            password,
+            fullName: fullName.trim(),
+            phone: phone.trim(),
+            role,
+          }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -54,7 +60,7 @@ export default function LoginPage() {
       const loginRes = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
       const loginData = await loginRes.json();
       if (!loginRes.ok) {
@@ -152,6 +158,7 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            minLength={isSignUp ? 8 : undefined}
             required
           />
         </label>
