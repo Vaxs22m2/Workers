@@ -7,6 +7,19 @@ import { resolveAuthOrigin } from "@/lib/auth-origin";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
+function canFallbackToLocalSignup(neonError: string | undefined, status: number | undefined) {
+  const message = (neonError || "").toLowerCase();
+  if (status === 0 || status === 503) return true;
+  if (status && status >= 500) return true;
+
+  return (
+    message.includes("origin") ||
+    message.includes("unable to reach auth service") ||
+    message.includes("missing auth url") ||
+    message.includes("failed to fetch")
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     if (!isDbConfigured()) {
@@ -69,11 +82,20 @@ export async function POST(request: NextRequest) {
       origin,
     });
 
-    if (!neonSignup.ok) {
+    const useLocalFallback = !neonSignup.ok && canFallbackToLocalSignup(neonSignup.error, neonSignup.status);
+
+    if (!neonSignup.ok && !useLocalFallback) {
       return NextResponse.json(
         { error: neonSignup.error || "Failed to create Neon auth user" },
         { status: neonSignup.status || 400 }
       );
+    }
+
+    if (useLocalFallback) {
+      console.warn("Neon signup unavailable. Continuing with local signup fallback.", {
+        status: neonSignup.status,
+        error: neonSignup.error,
+      });
     }
 
     // Create user
@@ -89,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token =
-      neonSignup.token ||
+      (neonSignup.ok ? neonSignup.token : undefined) ||
       jwt.sign(
         {
           id: user.id,
